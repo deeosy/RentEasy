@@ -16,7 +16,7 @@ export default function LoginPage() {
     <>
         <h3 className='text-4xl font-bold text-center mb-10' >Login</h3>
         <form action="" method='post' onSubmit={handleSubmit(onSubmit)} 
-            className='flex flex-col gap-1.5 max-w-[440px] mx-auto '
+            className='flex flex-col gap-5 max-w-[440px] mx-auto '
         >
             <input type="email" name="email" placeholder='Email' {...register("email", {required: "Email address is required"})} 
               className='rounded-xl bg-gray-300 px-6 py-3 placeholder-sky-700 '
@@ -30,6 +30,7 @@ export default function LoginPage() {
             {errors.password && (
               <span className='text-red-500 text-sm ' >{errors.password.message || "Password is required"}</span>
             )}
+            <h3 className='text-center' >Forgot Password?</h3>
             <LoginBtn />
         </form>
         <div className="mt-7">

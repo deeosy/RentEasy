@@ -54,7 +54,7 @@ function App() {
         className={`h-full w-full p-3 my-[100px] text-xl transition-all duration-900 ${
           showSignIn
             ? 'translate-y-[100%] md:translate-x-[100%] opacity-0'
-            : '-translate-y-[120%] md:translate-y-0 md:translate-x-0 opacity-100'
+            : '-translate-y-[126%] md:translate-y-0 md:translate-x-0 opacity-100'
         }`}
       >
         <SignUpPage />

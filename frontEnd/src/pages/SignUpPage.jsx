@@ -17,7 +17,7 @@ export default function SignUpPage() {
     <>
         <h3 className='text-4xl font-bold text-center mb-10' >Sign Up</h3>
         <form action="" method='post' onSubmit={handleSubmit(onSubmit)} 
-            className='flex flex-col gap-1.5 max-w-[440px] mx-auto'
+            className='flex flex-col gap-5 max-w-[440px] mx-auto'
         >
             <input type="username" name="username" placeholder='User name' {...register("username", {required: "User name is required"})} 
             className='rounded-xl bg-gray-300 px-6 py-3 placeholder-sky-700'

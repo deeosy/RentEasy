@@ -1,5 +1,33 @@
 const UserModel = require('../models/UserModel')
 const bcrypt = require("bcryptjs")
+const jwt = require('jsonwebtoken')
+const nodemailer = require('nodemailer')
+
+require('dotenv').config()
+
+
+const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+    }
+})
+
+const authCheck = async (req, res) => {
+    const token = req.cookies.token
+    if(!token) return res.status(401).json({message: "Unauthorized: No token provided"})
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY)
+        const user = await UserModel.findById(decoded.id)
+        if(!user) return res.status(404).json({ message: "User not found"})
+        res.status(200).json({user: {id: user._id, username: user.username, email: user.email}})
+    } catch (err) {
+        res.status(401).json({message: "Unauthorized: Invalid token"})
+    }
+}
+
 
 
 // create new user
@@ -16,8 +44,13 @@ const signUp = async (req, res) => {
         
         const user = new UserModel({ username, email, password: hashedPassword }) // passing the user to the backend
         const savedUser = await user.save() // saving the new user in the backend
+        
+        // create token after saving user
+        const token = jwt.sign({id:savedUser._id}, process.env.JWT_SECRET_KEY, {expiresIn: "1hr"})
 
-        res.status(200).json({message: "User created successfully", data: savedUser })
+        // add cookies to res
+        res.cookie("token", token, {httpOnly:true, secure: false, maxAge: 24*60*60*1000, sameSite: "strict"})
+        .status(200).json({message: "User created successfully", token, data: savedUser })
     } catch (err) {
         console.error({message: err.message})
         res.status(500).json({message: "Internal server error"})
@@ -38,7 +71,11 @@ const signIn = async (req, res) => {
         const isPasswordSame = await bcrypt.compare(password, user.password)  // compare passwords
         if (!isPasswordSame) return res.status(400).json({message: "Invalid credentials"})
         
-        res.status(200).json({message: "User signed in successfully", user: {id:user._id, username: user.username, email: user.email}})
+        const token = jwt.sign({id: user._id}, process.env.JWT_SECRET_KEY, {expiresIn: "1d"} ) // create a token when user has been able to log in and stay loged in for a day
+
+        // apply cookie to our res
+        res.cookie("token", token, {httpOnly:true, secure: false, maxAge: 24*60*60*1000, sameSite: "strict" })  // will have to change this for production
+        .status(200).json({message: "User signed in successfully", user: {id:user._id, username: user.username, email: user.email}})
 
     } catch (err) {
         console.error({message: err.message}) 
@@ -47,6 +84,86 @@ const signIn = async (req, res) => {
 }
 
 
+// Sign Out user 
+const signOut = async (req, res) => {
+    try {
+        res.clearCookie("token").status(200).json({message: "User successfully signed out"})  // clear cookie upon sign out
+    } catch (err) {
+        res.status(500).json({message: "Internal server error"})
+    }
+}
+
+// Request password reset
+const requestPasswordReset = async (req, res) => {
+    try {
+        const {email} = req.body;
+        if(!email) return res.status(400).json({message: "Email is required"})
+
+        const user = await UserModel.findOne({email})
+        if(!user) return res.status(400).json({message: "User not found"})
+
+        //generate reset token
+        const resetToken = jwt.sign({id: user._id}, process.env.JWT_SECRET_KEY, {expiresIn: "15m"})
+        const resetLink = `http://localhost:5173/reset-password/${resetToken}`
+
+        // store token and expiration in the database
+        user.resetPasswordToken = resetToken
+        user.resetPasswordExpires = Date.now() + 15*60*1000 // 15mins
+        await user.save()
+
+        // // In production, send email with resetLink. For now, log it
+        // console.log("Password reset link: ", resetLink)
+
+        // send email with reset link
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: "Password Reset Request",
+            text: `Click the following link to reset your password: ${resetLink}\nThis link expires in 15 minutes.`,
+            html: `<p>Click the following link to reset your password: <a href="${resetLink}">${resetLink}</a></p><p>This link expires in 15 minutes.</p>`,
+        }
+
+        await transporter.sendMail(mailOptions);
+
+        res.status(200).json({message: "Password reset link sent to your email"})
+    } catch (err) {
+        console.error({message: err.message});
+        res.status(500).json({message: "Internal server error"})        
+    }
+}
+
+//confirm password reset
+const confirmPasswordReset = async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+        if(!token || !newPassword) return res.status(400).json({message: "Token and password are required"})
+
+        //Find user with valid token and non-expired
+        const user = await UserModel.findOne({
+            resetPasswordToken: token,
+            resetPasswordExpires: {$gt: Date.now()},
+        })
+        if(!user) return res.status(400).json({message: "Invalid or expired token"})
+        
+        //verify token
+        try {
+            jwt.verify(token, process.env.JWT_SECRET_KEY)
+        } catch (err) {
+            return res.status(400).json({message: "Invalid token"})
+        }
+
+        // update password
+        user.password = await bcrypt.hash(newPassword, 10)
+        user.resetPasswordToken = null
+        user.resetPasswordExpires = null
+        await user.save()
+
+        res.status(200).json({message: "Password reset successfully"})
+    } catch (err) {
+        console.error({message: err.message})
+        res.status(500).json({message: "Internal server error"})        
+    }
+}
 
 
-module.exports = {signUp, signIn}
+module.exports = {signUp, signIn, signOut, authCheck, requestPasswordReset, confirmPasswordReset}

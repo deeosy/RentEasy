@@ -1,20 +1,12 @@
+const punycode = require('punycode/'); 
 const express = require('express')
-const { default: mongoose } = require('mongoose')
+const mongoose = require('mongoose')
 const userRoutes = require('./routes/UserRoutes')
 const propertyRoutes = require('./routes/PropertyRoutes')
 const cookieParser = require('cookie-parser')
 const cors = require('cors')
-const admin = require('firebase-admin') 
 
 require('dotenv').config()
-
-const serviceAccount = require('./firebase/serviceAccountKey.json')
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount), 
-  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-})
-
 
 const port = process.env.PORT || 4001
 const server = express()
@@ -53,5 +45,3 @@ mongoose.connect(process.env.MONGO_DB).then(() => {
 }).catch((err) => {
   console.log(err);
 })
-
-module.exports = {admin}

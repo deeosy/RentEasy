@@ -7,9 +7,6 @@ export default function HeroSection({ handlePremiumFeatureClick }) {
   return (
     <section className='relative bg-gradient-to-r from-indigo-700 to-indigo-900 overflow-hidden' >
         <div className="absolute inset-0 z-0">
-            {/* <img src="https://readdy.ai/api/search-image?query=Modern%20real%20estate%20concept%20with%20elegant%20city%20skyline%20at%20sunset%2C%20soft%20gradient%20lighting%20creating%20a%20warm%20atmosphere.%20The%20image%20shows%20a%20beautiful%20urban%20landscape%20with%20residential%20buildings%20and%20natural%20elements%20like%20trees%20integrated%20into%20the%20cityscape%2C%20perfect%20for%20a%20property%20rental%20website%20hero%20background.&width=1440&height=600&seq=81&orientation=landscape" 
-                alt="Hero background" className='w-full h-full object-cover object-center opacity-20' 
-            /> */}
             <img src={heroImage} alt="" className='w-full h-full object-cover object-center opacity-20'  />
         </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative z-10 ">

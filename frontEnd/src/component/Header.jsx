@@ -19,8 +19,10 @@ export default function Header() {
                     </nav>
                 </div>
                 <div className="flex items-center">
-                    <button className='bg-white text-indigo-600 border border-indigo-600 px-4 py-2 rounded-md text-sm font-medium mr-3 !rounded-button whitespace-nowrap cursor-pointer ' >Log In</button>
-                    <button className='bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium !rounded-button whitespace-nowrap cursor-pointer ' >Sign Up</button>
+                    {/* <button className='bg-white text-indigo-600 border border-indigo-600 px-4 py-2 rounded-md text-sm font-medium mr-3 !rounded-button whitespace-nowrap cursor-pointer ' >Log In</button> */}
+                    <NavLink to="/access" >
+                        <button className='bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium !rounded-button whitespace-nowrap cursor-pointer ' >Sign Up</button>
+                    </NavLink>
                 </div>
             </div>
         </div>

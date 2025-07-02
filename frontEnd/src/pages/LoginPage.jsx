@@ -1,16 +1,33 @@
 import React from 'react'
 import { useForm } from 'react-hook-form'
 import LoginBtn from '../component/loginBtn'
+import { Link, useNavigate } from 'react-router-dom';
 import googleIcon from '../icons/google.png'
 import facebookIcon from '../icons/facebook.png'
+import { LoginUser } from '../../APIs/api';
+import { useEffect } from 'react';
 
 
-export default function LoginPage() {
+export default function LoginPage({setIsAuth, checkAuth}) {
     const {register, handleSubmit, reset, formState: {errors}} = useForm()
+    const navigate = useNavigate()
 
-    const onSubmit = () => {
-    
+    const onSubmit = async (data) => {
+      try {
+          await LoginUser(data.email, data.password)
+          await checkAuth(); // re-check authentication status after login
+          alert("Check in successfully");
+          setIsAuth(true)
+          navigate("/properties");          
+        } catch (error) {
+          setIsAuth(false);
+          alert("Check in failed. Please check your credentials")
+        } finally{
+          reset();
+        }
     }
+
+
 
   return (
     <>
@@ -30,7 +47,9 @@ export default function LoginPage() {
             {errors.password && (
               <span className='text-red-500 text-sm ' >{errors.password.message || "Password is required"}</span>
             )}
-            <h3 className='text-center' >Forgot Password?</h3>
+            <Link to="/reset-password" >
+              <h3 className='text-center text-sky-700 hover:underline' >Forgot Password?</h3>
+            </Link>
             <LoginBtn />
         </form>
         <div className="mt-7">

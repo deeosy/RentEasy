@@ -23,9 +23,9 @@ export default function Access({isAuth, setIsAuth, checkAuth}) {
 
 
     return (
-        <div className="relative m-[5vh] max-w-7xl md:mx-auto rounded-4xl bg-indigo-300 text-white h-[88vh] md:h-[78vh] mx-2 overflow-hidden flex flex-col md:flex-row justify-between gap-5">
+        <div className="relative m-[30px] max-w-7xl md:mx-auto rounded-4xl bg-indigo-300 text-white h-[700px] md:h-[640px] mx-2 overflow-hidden flex flex-col md:flex-row justify-between gap-20 ">
         <div
-            className={`absolute left-0 z-10 bg-indigo-500 h-[200%] w-full md:h-full md:w-[200%] rounded-[70px] md:rounded-[150px] flex flex-col md:flex-row justify-between ${
+            className={`absolute left-0 z-10 bg-gradient-to-t from-indigo-700 to-indigo-900 h-[200%] w-full md:h-full md:w-[200%] rounded-[70px] md:rounded-[150px] flex flex-col md:flex-row justify-between ${
             showSignIn
                 ? 'translate-y-[40%] md:translate-x-[25%] md:translate-y-0 transition-all duration-700'
                 : '-translate-y-[90%] md:-translate-y-0 md:-translate-x-[75%] transition-all duration-700'
@@ -53,7 +53,7 @@ export default function Access({isAuth, setIsAuth, checkAuth}) {
             </div>
         </div>
         <div
-            className={`h-full w-full p-3 my-[60px] text-xl transition-all duration-900 ${
+            className={`h-full w-full p-3 my-[30px] text-xl transition-all duration-900 ${
             showSignIn
                 ? 'translate-y-0 md:translate-x-0 opacity-100'
                 : '-translate-y-[100%] md:translate-x-[100%] opacity-0'
@@ -63,7 +63,7 @@ export default function Access({isAuth, setIsAuth, checkAuth}) {
             <SignUpPage setIsAuth={setIsAuth} checkAuth={checkAuth} />
         </div>
         <div
-            className={`h-full w-full p-3 my-[110px] text-xl transition-all duration-900 ${
+            className={`h-full w-full p-3 mt-[150px] md:my-[30px] text-xl transition-all duration-900 ${
             showSignIn
                 ? 'translate-y-[100%] md:translate-x-[100%] opacity-0'
                 : '-translate-y-[136%] md:translate-y-0 md:translate-x-0 opacity-100'

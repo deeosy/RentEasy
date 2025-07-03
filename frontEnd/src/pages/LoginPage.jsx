@@ -35,18 +35,22 @@ export default function LoginPage({setIsAuth, checkAuth}) {
         <form action="" method='post' onSubmit={handleSubmit(onSubmit)} 
             className='flex flex-col gap-5 max-w-[440px] mx-auto text-indigo-900 '
         >
-            <input type="email" name="email" placeholder='Email' {...register("email", {required: "Email address is required"})} 
-              className='rounded-xl bg-gray-300 px-6 py-3 placeholder-indigo-900 focus:outline-none'
-            />
-            {errors.email && (
-              <span className='text-red-500 text-sm' >{errors.email.message || "Email address is required"}</span>
-            )}
+          <div className="flex flex-col">
+              <input type="email" name="email" placeholder='Email' {...register("email", {required: "Email address is required"})} 
+                className='rounded-xl bg-gray-300 px-6 py-3 placeholder-indigo-900 focus:outline-none'
+              />
+              {errors.email && (
+                <span className='text-red-500 text-sm' >{errors.email.message || "Email address is required"}</span>
+              )}
+          </div>
+          <div className="flex flex-col">
             <input type="password" name="password" placeholder='Password' {...register("password", {required: "Password is required"})} 
               className='rounded-xl bg-gray-300 px-6 py-3 placeholder-indigo-900 focus:outline-none'
             />
             {errors.password && (
               <span className='text-red-500 text-sm ' >{errors.password.message || "Password is required"}</span>
             )}
+          </div>
             <div className="flex justify-between ">
               <Link to="/reset-password" >
                 <h3 className='text-center text-indigo-900 hover:underline' >Forgot Password?</h3>

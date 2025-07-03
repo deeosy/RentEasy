@@ -19,29 +19,35 @@ export default function SignUpPage() {
         <form action="" method='post' onSubmit={handleSubmit(onSubmit)} 
             className='flex flex-col gap-5 max-w-[440px] mx-auto text-indigo-900 outline-none '
         >
-            <input type="username" name="username" placeholder='User name' {...register("username", {required: "User name is required"})} 
-            className='rounded-xl bg-gray-300 px-6 py-3 placeholder-indigo-900 focus:outline-none'
-            />
-            {errors.username && (
-            <span className='text-red-500 text-sm' >{errors.username.message || "User name is required"}</span>
-            )}
-            <input type="email" name="email" placeholder='Email' {...register("email", {required: "Email address is required"})} 
-            className='rounded-xl bg-gray-300 px-6 py-3 placeholder-indigo-900 focus:outline-none'
-            />
-            {errors.email && (
-            <span className='text-red-500 text-sm' >{errors.email.message || "Email address is required"}</span>
-            )}
-            <input type="password" name="password" placeholder='Password' {...register("password", {required: "Password is required"})} 
-            className='rounded-xl bg-gray-300 px-6 py-3 placeholder-indigo-900 focus:outline-none'
-            />
-            {errors.password && (
-            <span className='text-red-500 text-sm' >{errors.password.message || "Password is required"}</span>
-            )}
+            <div className="flex flex-col">
+                <input type="username" name="username" placeholder='User name' {...register("username", {required: "User name is required"})} 
+                className='rounded-xl bg-gray-300 px-6 py-3 placeholder-indigo-900 focus:outline-none'
+                />
+                {errors.username && (
+                <span className='text-red-500 text-sm' >{errors.username.message || "User name is required"}</span>
+                )}
+            </div>
+            <div className="flex flex-col">
+                <input type="email" name="email" placeholder='Email' {...register("email", {required: "Email address is required"})} 
+                className='rounded-xl bg-gray-300 px-6 py-3 placeholder-indigo-900 focus:outline-none'
+                />
+                {errors.email && (
+                <span className='text-red-500 text-sm' >{errors.email.message || "Email address is required"}</span>
+                )}
+            </div>
+            <div className="flex flex-col">
+                <input type="password" name="password" placeholder='Password' {...register("password", {required: "Password is required"})} 
+                className='rounded-xl bg-gray-300 px-6 py-3 placeholder-indigo-900 focus:outline-none'
+                />
+                {errors.password && (
+                <span className='text-red-500 text-sm' >{errors.password.message || "Password is required"}</span>
+                )}
+            </div>
             <SignUpBtn  />
         </form>
-        <div className="mt-7">
+        <div className="mt-3">
             <h3 className='text-center' >Or register with social platforms</h3>
-            <div className="flex justify-center mt-5 gap-3 ">
+            <div className="flex justify-center mt-3 gap-3 ">
                 <button className='cursor-pointer rounded-sm border p-2 ' >
                     <img src={googleIcon} alt="" className='h-6' />
                 </button>

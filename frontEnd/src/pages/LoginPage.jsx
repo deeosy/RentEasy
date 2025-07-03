@@ -33,24 +33,26 @@ export default function LoginPage({setIsAuth, checkAuth}) {
     <>
         <h3 className='text-4xl font-bold text-center mb-10' >Login</h3>
         <form action="" method='post' onSubmit={handleSubmit(onSubmit)} 
-            className='flex flex-col gap-5 max-w-[440px] mx-auto '
+            className='flex flex-col gap-5 max-w-[440px] mx-auto text-indigo-900 '
         >
             <input type="email" name="email" placeholder='Email' {...register("email", {required: "Email address is required"})} 
-              className='rounded-xl bg-gray-300 px-6 py-3 placeholder-sky-700 '
+              className='rounded-xl bg-gray-300 px-6 py-3 placeholder-indigo-900 focus:outline-none'
             />
             {errors.email && (
               <span className='text-red-500 text-sm' >{errors.email.message || "Email address is required"}</span>
             )}
             <input type="password" name="password" placeholder='Password' {...register("password", {required: "Password is required"})} 
-              className='rounded-xl bg-gray-300 px-6 py-3 placeholder-sky-700'
+              className='rounded-xl bg-gray-300 px-6 py-3 placeholder-indigo-900 focus:outline-none'
             />
             {errors.password && (
               <span className='text-red-500 text-sm ' >{errors.password.message || "Password is required"}</span>
             )}
-            <Link to="/reset-password" >
-              <h3 className='text-center text-sky-700 hover:underline' >Forgot Password?</h3>
-            </Link>
-            <LoginBtn />
+            <div className="flex justify-between ">
+              <Link to="/reset-password" >
+                <h3 className='text-center text-indigo-900 hover:underline' >Forgot Password?</h3>
+              </Link>
+              <LoginBtn />
+            </div>
         </form>
         <div className="mt-7">
             <h3 className='text-center' >Or login with social platforms</h3>

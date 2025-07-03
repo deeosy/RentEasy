@@ -17,22 +17,22 @@ export default function SignUpPage() {
     <>
         <h3 className='text-4xl font-bold text-center mb-10' >Sign Up</h3>
         <form action="" method='post' onSubmit={handleSubmit(onSubmit)} 
-            className='flex flex-col gap-5 max-w-[440px] mx-auto'
+            className='flex flex-col gap-5 max-w-[440px] mx-auto text-indigo-900 outline-none '
         >
             <input type="username" name="username" placeholder='User name' {...register("username", {required: "User name is required"})} 
-            className='rounded-xl bg-gray-300 px-6 py-3 placeholder-sky-700'
+            className='rounded-xl bg-gray-300 px-6 py-3 placeholder-indigo-900 focus:outline-none'
             />
             {errors.username && (
             <span className='text-red-500 text-sm' >{errors.username.message || "User name is required"}</span>
             )}
             <input type="email" name="email" placeholder='Email' {...register("email", {required: "Email address is required"})} 
-            className='rounded-xl bg-gray-300 px-6 py-3 placeholder-sky-700'
+            className='rounded-xl bg-gray-300 px-6 py-3 placeholder-indigo-900 focus:outline-none'
             />
             {errors.email && (
             <span className='text-red-500 text-sm' >{errors.email.message || "Email address is required"}</span>
             )}
             <input type="password" name="password" placeholder='Password' {...register("password", {required: "Password is required"})} 
-            className='rounded-xl bg-gray-300 px-6 py-3 placeholder-sky-700'
+            className='rounded-xl bg-gray-300 px-6 py-3 placeholder-indigo-900 focus:outline-none'
             />
             {errors.password && (
             <span className='text-red-500 text-sm' >{errors.password.message || "Password is required"}</span>

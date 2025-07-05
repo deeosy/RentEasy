@@ -52,7 +52,7 @@ const verifyPaystackPayment = async (reference) => {
 
 const createProperty = async (req, res) => {
     try {
-        const { title, description, price, location, type } = req.body;
+        const { title, description, price, location, type, beds, baths } = req.body;
         const userId = req.user.id;
         const files = req.files;
 
@@ -90,7 +90,7 @@ const createProperty = async (req, res) => {
                 message: 'Payment required for this listing', 
                 paymentUrl: paymentData.authorization_url,
                 reference: paymentData.reference,
-                propertyData: { title, description, price, location, images: imageUrls, type}
+                propertyData: { title, description, price, location, images: imageUrls, type, beds, baths}
             })
         }
 
@@ -104,6 +104,8 @@ const createProperty = async (req, res) => {
             price,
             location: JSON.parse(location), // parse JSON string from form data
             images: imageUrls,
+            beds,
+            baths,
             type,
         });
 
@@ -136,6 +138,8 @@ const confirmPropertyPayment = async (req, res) => {
             location: propertyData.location,
             images: propertyData.images,
             type: propertyData.type,
+            beds: propertyData.beds,
+            baths: propertyData.baths,
         });
 
         await property.save();
@@ -151,8 +155,16 @@ const confirmPropertyPayment = async (req, res) => {
 
 const getAllProperties = async (req, res) => {
     try {
-        const properties = await PropertyModel.find().populate('userId', 'username email');
-        res.status(200).json({ properties });
+        const properties = await PropertyModel.find().populate('userId', 'username email phone');
+        // res.status(200).json({ properties });
+        res.status(200).json({ 
+            properties: properties.map((property) => ({
+              ...property.toObject(),
+              contactName: property.userId.username,
+              contactEmail: property.userId.email,
+              contactPhone: property.userId.phone,
+            })),
+        });
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Internal server error '});        

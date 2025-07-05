@@ -21,7 +21,9 @@ const PropertySchema =  new Schema({
         },
     },
     images: [{type: String}],  //Array for max of 5 image URLs
-    type: {type: String, enum: ['room', 'building'], required: true},
+    type: {type: String, enum: ['room', 'building', 'apartment'], required: true},
+    beds: {type: Number, default: 0},
+    baths: {type: Number, default: 0},
     createdAt: {type: Date, default: Date.now},
 })
 

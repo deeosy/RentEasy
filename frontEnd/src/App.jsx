@@ -1,5 +1,5 @@
 import './App.css';
-import { Routes, Route,  useNavigate  } from 'react-router-dom'
+import { Routes, Route,  useNavigate, Navigate  } from 'react-router-dom'
 import PropertiesPage from './pages/PropertiesPage';
 import axios from 'axios';
 import { useState, useEffect } from 'react';
@@ -11,22 +11,16 @@ import HowItWorks from './component/HowItWorks';
 import Footer from './component/Footer';
 import ListingDetailModal from './component/ListingDetailModal';
 import Access from './pages/Access';
-
+import ListPropertyPage from './pages/ListPropertyPage';
+import usePropertyStore from './store/usePropertyStore';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function App() {
-  const [isAuth, setIsAuth] = useState(false)
+  const { isAuth, checkAuth } = usePropertyStore()
   const [selectedListing, setSelectedListing] = useState(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const navigate = useNavigate();
-
-  const checkAuth = async () => {
-    try {
-      await axios.get("http://localhost:4001/api", {withCredentials: true})
-      setIsAuth(true)
-    } catch (error) {
-      setIsAuth(false)
-    }
-  }
 
   useEffect(() => {
     checkAuth()
@@ -60,14 +54,26 @@ function App() {
           </>
         } />
         <Route path='/properties' element={<PropertiesPage />} />
-        <Route path="/access" element={<Access isAuth={isAuth} setIsAuth={setIsAuth} checkAuth={checkAuth} />} />
+        <Route path="/list-property" element={isAuth ? <ListPropertyPage /> : <Navigate to="/" />} />
+        <Route path="/access" element={<Access />} />
         {/* 
         <Route path="/signup" element={<SignUpPage />} />
-        <Route path="/properties" element={isAuth ? <PropertiesPage /> : <Navigate to="/" />} />
         <Route path="/reset-password" element={<ResetPassword />} /> */}
       </Routes>
       <Footer />
       <ListingDetailModal show={showDetailModal} listing={selectedListing} onClose={handleCloseDetailModal} onPremiumClick={handlePremiumFeatureClick} />
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
     </div>
   );
 }

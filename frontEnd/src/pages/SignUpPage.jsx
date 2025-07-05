@@ -3,13 +3,28 @@ import SignUpBtn from '../component/SignUpBtn'
 import { useForm } from 'react-hook-form'
 import googleIcon from '../icons/google.png'
 import facebookIcon from '../icons/facebook.png'
+import usePropertyStore from '../store/usePropertyStore'
+import { data, useNavigate } from 'react-router-dom'
+import { toast } from 'react-toastify'
 
 
-export default function SignUpPage() {
+export default function SignUpPage({ checkAuth }) {
+    const { signUp } = usePropertyStore()
     const {register, handleSubmit, reset, formState: {errors}} = useForm()
+    const navigate = useNavigate();
 
-    const onSubmit = () => {
-    
+
+    const onSubmit = async () => {
+        try {
+            await signUp(data.username, data.email, data.password);
+            await checkAuth();
+            toast.success('Signup successful');
+            navigate('/properties');
+        } catch (err) {
+            toast.error('Signup failed: ', err.message);            
+        } finally {
+            reset();
+        }
     }
 
 

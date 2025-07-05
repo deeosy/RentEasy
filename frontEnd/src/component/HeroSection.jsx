@@ -34,7 +34,7 @@ export default function HeroSection({ handlePremiumFeatureClick }) {
                         <div className="flex flex-wrap gap-2">
                             {popularLocations.map((location, index) => (
                               <button key={index}
-                                className="bg-indigo-800 bg-opacity-50 hover:bg-opacity-70 text-white px-3 py-1 rounded-full text-sm !rounded-button whitespace-nowrap cursor-pointer "
+                                className="bg-indigo-800 bg-opacity-50 hover:bg-opacity-70 border border-white text-white px-3 py-1 rounded-full text-sm !rounded-button whitespace-nowrap cursor-pointer "
                               >
                                 {location}
                               </button>

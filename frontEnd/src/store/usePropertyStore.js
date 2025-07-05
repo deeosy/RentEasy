@@ -9,6 +9,19 @@ const usePropertyStore = create(
             user: null,
             properties: [],
             isAuth: false,
+            checkAuth: async () => {
+                try {
+                    const response = await axios.get('http://localhost:4001/api', { withCredentials: true } );
+                    if (response.status === 200) {
+                        const { user } = response.data;
+                        set({ user, isAuth: true });
+                    } else {
+                        set({ user: null, isAuth: false })
+                    }
+                } catch (error) {
+                    set({ user: null, isAuth: false })
+                }
+            },
             signUp: async (username, email, password) => {
                 try {
                     const response = await SignUpUser(username, email, password);
@@ -39,6 +52,8 @@ const usePropertyStore = create(
             },
 
             setProperties: (properties) => set({ properties }),
+
+            // update with user phone number later
             addProperty: async (propertyData, files) => {
                 try {
                     const formData = new FormData();

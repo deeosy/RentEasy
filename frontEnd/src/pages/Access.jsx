@@ -1,25 +1,29 @@
 // import React from 'react'
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import LoginPage from '../pages/LoginPage';
 import SignUpPage from '../pages/SignUpPage';
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import usePropertyStore from '../store/usePropertyStore';
 
-export default function Access({isAuth, setIsAuth, checkAuth}) {
-    const [showSignIn, setShowSignIn] = useState(true); // Single state to toggle between login and signup
-    const navigate = useNavigate()
+export default function Access() {
+    const { isAuth, checkAuth } = usePropertyStore();
+    const navigate = useNavigate();
+    const location = useLocation();
+    const [showSignIn, setShowSignIn] = useState(() => {
+        const params = new URLSearchParams(location.search);
+        return params.get('mode') !== 'signup'
+    }); 
+
+    useEffect(() => {
+       if(isAuth){
+           navigate("/properties")
+       } 
+   }, [isAuth, navigate]);
 
     const handleSwitchPages = () => {
         setShowSignIn(!showSignIn);
     };
     
-    useEffect(() => {
-      if(isAuth){
-        navigate("/properties")
-      } else {
-        navigate("/access")
-      }
-    }, [isAuth, navigate])
 
 
     return (
@@ -60,7 +64,7 @@ export default function Access({isAuth, setIsAuth, checkAuth}) {
             }`}
         >
             
-            <SignUpPage setIsAuth={setIsAuth} checkAuth={checkAuth} />
+            <SignUpPage checkAuth={checkAuth} />
         </div>
         <div
             className={`h-full w-full p-3 mt-[150px] md:my-[30px] text-xl transition-all duration-900 ${

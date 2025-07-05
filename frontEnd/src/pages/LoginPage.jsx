@@ -1,27 +1,26 @@
 import React from 'react'
 import { useForm } from 'react-hook-form'
-import LoginBtn from '../component/loginBtn'
 import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify'
+import LoginBtn from '../component/loginBtn'
 import googleIcon from '../icons/google.png'
 import facebookIcon from '../icons/facebook.png'
-import { LoginUser } from '../../APIs/api';
-import { useEffect } from 'react';
+import usePropertyStore from '../store/usePropertyStore';
 
 
-export default function LoginPage({setIsAuth, checkAuth}) {
+export default function LoginPage({ checkAuth }) {
+    const { login } = usePropertyStore();
     const {register, handleSubmit, reset, formState: {errors}} = useForm()
-    const navigate = useNavigate()
+    const navigate = useNavigate();
 
     const onSubmit = async (data) => {
       try {
-          await LoginUser(data.email, data.password)
+          await login(data.email, data.password)
           await checkAuth(); // re-check authentication status after login
-          alert("Check in successfully");
-          setIsAuth(true)
+          toast.success('Login successful')
           navigate("/properties");          
         } catch (error) {
-          setIsAuth(false);
-          alert("Check in failed. Please check your credentials")
+          toast.error(`Login failed: ${error.message}. Please check your credentials`)
         } finally{
           reset();
         }

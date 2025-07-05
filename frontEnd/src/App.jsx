@@ -59,7 +59,7 @@ function App() {
             <HowItWorks />
           </>
         } />
-        <Route path='/search' element={<PropertiesPage />} />
+        <Route path='/properties' element={<PropertiesPage />} />
         <Route path="/access" element={<Access isAuth={isAuth} setIsAuth={setIsAuth} checkAuth={checkAuth} />} />
         {/* 
         <Route path="/signup" element={<SignUpPage />} />

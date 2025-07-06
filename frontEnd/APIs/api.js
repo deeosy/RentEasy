@@ -6,9 +6,9 @@ const api = axios.create({
     withCredentials: true, // ensures cookie are sent with requests to the backend
 })
 
-export const SignUpUser = async (username, email, password) => {
-    try {
-        const response = await api.post('/signup', {username, email, password})
+export const SignUpUser = async (username, email, phone, password) => {
+    try {        
+        const response = await api.post('/signup', {username, email, phone, password})
         return response.data;
     } catch (err) {
         console.error("Sign up error: ", err);

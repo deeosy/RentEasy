@@ -22,9 +22,9 @@ const usePropertyStore = create(
                     set({ user: null, isAuth: false })
                 }
             },
-            signUp: async (username, email, password) => {
+            signUp: async (username, email, phone, password) => {
                 try {
-                    const response = await SignUpUser(username, email, password);
+                    const response = await SignUpUser(username, email, phone, password);
                     set({ user: response.user, isAuth: true });
                     return response;
                 } catch (err) {

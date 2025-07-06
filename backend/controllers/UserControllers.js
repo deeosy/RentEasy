@@ -32,21 +32,23 @@ const authCheck = async (req, res) => {
 
 // create new user
 const signUp = async (req, res) => {
+    
     try {
-        const {username, email, password} = req.body; // user info from frontend
+        const {username, email, password, phone} = req.body; // user info from frontend
 
-        if(!username || !email || !password ) return res.status(400).json({message: "All fields are required"}) // required input fields
-        
+        if(!username || !email || !password || !phone ) {
+            return res.status(400).json({message: "All fields are required"}) // required input fields
+        }
         const existingUser = await UserModel.findOne({ email }) // chedk if email is already in the database
         if(existingUser) return res.status(400).json({message: "User already exists"})
         
         const hashedPassword = await bcrypt.hash(password, 10)  // hash password b4 saving in database
         
-        const user = new UserModel({ username, email, password: hashedPassword }) // passing the user to the backend
+        const user = new UserModel({ username, email, password: hashedPassword, phone }) // passing the user to the backend
         const savedUser = await user.save() // saving the new user in the backend
         
         // create token after saving user
-        const token = jwt.sign({id:savedUser._id}, process.env.JWT_SECRET_KEY, {expiresIn: "1hr"})
+        const token = jwt.sign({id:savedUser._id}, process.env.JWT_SECRET_KEY, {expiresIn: "1d"})
 
         // add cookies to res
         res.cookie("token", token, {httpOnly:true, secure: false, maxAge: 24*60*60*1000, sameSite: "strict"})
@@ -63,7 +65,7 @@ const signUp = async (req, res) => {
 const signIn = async (req, res) => {
     try {
         const { email, password } = req.body // get credentials from frontend 
-        if( !email || !password ) return res.status(400).json('All fields required') // required input fields
+        if( !email || !password ) return res.status(400).json({message:'All fields required'}) // required input fields
 
         const user = await UserModel.findOne({ email }) // get user from database
         if(!user) return res.status(404).json({ message: "User not found" })

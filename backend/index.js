@@ -13,6 +13,7 @@ const server = express()
 // const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(",") : [];
 
 //middlewares
+server.use(express.json())
 server.use(cookieParser())
 server.use(cors({
   origin: "http://localhost:5173",  // cors configuration  for local host,
@@ -29,7 +30,7 @@ server.use(cors({
 
   credentials: true, //needed for cookies to work
 }))
-server.use(express.json())
+
 
 
 

@@ -214,6 +214,8 @@ export function PostAdModal() {
                     <Select {...field} label="Property Type" value={field.value || ''} >
                       <MenuItem value="room">Room</MenuItem>
                       <MenuItem value="building">Building</MenuItem>
+                      <MenuItem value="building">Building</MenuItem>
+                      <MenuItem value="building">Building</MenuItem>
                     </Select>
                   )}
                 />
@@ -222,6 +224,7 @@ export function PostAdModal() {
               <FormControlLabel
                 control={<Checkbox checked={useGPS} onChange={() => setUseGPS(!useGPS)} />}
                 label="Use GPS Location"
+                className='text-white'
               />
               {useGPS ? (
                 <>

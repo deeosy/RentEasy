@@ -1,5 +1,5 @@
 import './App.css';
-import { Routes, Route,  useNavigate, Navigate  } from 'react-router-dom'
+import { Routes, Route, useNavigate, Navigate } from 'react-router-dom'
 import PropertiesPage from './pages/PropertiesPage';
 import axios from 'axios';
 import { useState, useEffect } from 'react';
@@ -13,6 +13,8 @@ import ListingDetailModal from './component/ListingDetailModal';
 import Access from './pages/Access';
 import ListPropertyPage from './pages/ListPropertyPage';
 import usePropertyStore from './store/usePropertyStore';
+import PropertyDetailsPage from './pages/PropertyDetailsPage';
+import DirectionsPage from './pages/DirectionsPage';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -56,6 +58,8 @@ function App() {
         <Route path='/properties' element={<PropertiesPage />} />
         <Route path="/list-property" element={isAuth ? <ListPropertyPage /> : <Navigate to="/" />} />
         <Route path="/access" element={<Access />} />
+        <Route path="/property/:id" element={<PropertyDetailsPage />} />
+        <Route path="/directions/:id" element={<DirectionsPage />} />
         {/* 
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/reset-password" element={<ResetPassword />} /> */}

@@ -1,5 +1,5 @@
 import './App.css';
-import { Routes, Route,  useNavigate, Navigate  } from 'react-router-dom'
+import { Routes, Route, useNavigate, Navigate } from 'react-router-dom'
 import PropertiesPage from './pages/PropertiesPage';
 import axios from 'axios';
 import { useState, useEffect } from 'react';
@@ -15,6 +15,7 @@ import ListPropertyPage from './pages/ListPropertyPage';
 import usePropertyStore from './store/usePropertyStore';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import SettingPage from './pages/SettingPage';
 
 function App() {
   const { isAuth, checkAuth } = usePropertyStore()
@@ -56,6 +57,7 @@ function App() {
         <Route path='/properties' element={<PropertiesPage />} />
         <Route path="/list-property" element={isAuth ? <ListPropertyPage /> : <Navigate to="/" />} />
         <Route path="/access" element={<Access />} />
+        <Route path="/settings"  element={<SettingPage />} />
         {/* 
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/reset-password" element={<ResetPassword />} /> */}
@@ -74,7 +76,7 @@ function App() {
         pauseOnHover
         theme="light"
       />
-    </div>
+    </div >
   );
 }
 

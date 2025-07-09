@@ -1,21 +1,25 @@
 import React, { useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
-import { Camera, Edit3, Save, X, User, Mail, Phone, Upload, Check, AlertCircle, Loader2 } from 'lucide-react'
+import { Edit3, Save, X, User, Mail, Phone, Upload, Check, AlertCircle, Loader2, Lock, Plus } from 'lucide-react'
+import defaultUser from "../icons/defaultUser.svg"
 
 const SettingPage = () => {
     const [isEditing, setIsEditing] = useState(false)
-    const [profileImage, setProfileImage] = useState('/api/placeholder/200/200')
+    const [profileImage, setProfileImage] = useState(null) // Changed to null initially
     const [showImageOptions, setShowImageOptions] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const [updateStatus, setUpdateStatus] = useState(null) // 'success' | 'error' | null
     const [errorMessage, setErrorMessage] = useState('')
+    const [authToken, setAuthToken] = useState('demo-token') // Replace localStorage
     
     // Track verification status for each field
     const [verificationStatus, setVerificationStatus] = useState({
         firstName: true,
         lastName: true,
+        username: true,
         email: true,
-        phone: true
+        phone: true,
+        password: true
     })
     
     const {
@@ -29,8 +33,10 @@ const SettingPage = () => {
         defaultValues: {
             firstName: 'John',
             lastName: 'Doe',
+            username: 'johndoe123',
             email: 'john.doe@example.com',
-            phone: '+1 (555) 123-4567'
+            phone: '+1 (555) 123-4567',
+            password: '********'
         },
         mode: 'onChange'
     })
@@ -52,7 +58,7 @@ const SettingPage = () => {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}` // Add your auth token
+                    'Authorization': `Bearer ${authToken}` // Using state instead of localStorage
                 },
                 body: JSON.stringify(data)
             })
@@ -74,8 +80,10 @@ const SettingPage = () => {
             setVerificationStatus({
                 firstName: true,
                 lastName: true,
+                username: true,
                 email: true,
-                phone: true
+                phone: true,
+                password: true
             })
 
             setUpdateStatus('success')
@@ -95,8 +103,10 @@ const SettingPage = () => {
             setVerificationStatus({
                 firstName: false,
                 lastName: false,
+                username: false,
                 email: false,
-                phone: false
+                phone: false,
+                password: false
             })
         } finally {
             setIsLoading(false)
@@ -115,7 +125,7 @@ const SettingPage = () => {
         if (file) {
             const reader = new FileReader()
             reader.onload = async (e) => {
-                setProfileImage(e.target.result)
+                setProfileImage(e.target.result) // This will replace the default image
                 
                 // ============================================
                 // BACKEND INTEGRATION - Image Upload
@@ -128,7 +138,7 @@ const SettingPage = () => {
                     const response = await fetch('/api/admin/profile/image', {
                         method: 'POST',
                         headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                            'Authorization': `Bearer ${authToken}`
                         },
                         body: formData
                     })
@@ -155,7 +165,7 @@ const SettingPage = () => {
     }
 
     const removeImage = async () => {
-        setProfileImage('/api/placeholder/200/200')
+        setProfileImage(null) // Set back to null to show default image
         setShowImageOptions(false)
         
         // ============================================
@@ -166,7 +176,7 @@ const SettingPage = () => {
             const response = await fetch('/api/admin/profile/image', {
                 method: 'DELETE',
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                    'Authorization': `Bearer ${authToken}`
                 }
             })
 
@@ -262,9 +272,9 @@ const SettingPage = () => {
                                     <h3 className='text-xl font-semibold text-indigo-900 mb-6'>Profile Picture</h3>
                                     
                                     <div className='relative inline-block mb-6'>
-                                        <div className='w-48 h-48 rounded-full overflow-hidden bg-white shadow-lg ring-4 ring-indigo-100 mx-auto'>
+                                        <div className='w-48 h-48 rounded-full overflow-hidden bg-white shadow-lg mx-auto'>
                                             <img 
-                                                src={profileImage} 
+                                                src={profileImage || defaultUser} 
                                                 alt="Profile" 
                                                 className='w-full h-full object-cover'
                                             />
@@ -275,7 +285,7 @@ const SettingPage = () => {
                                             onClick={() => setShowImageOptions(!showImageOptions)}
                                             className='absolute -bottom-2 -right-2 bg-indigo-600 text-white p-3 rounded-full shadow-lg hover:bg-indigo-700 transition-colors'
                                         >
-                                            <Camera size={20} />
+                                            <Plus size={20} />
                                         </button>
                                         
                                         {showImageOptions && (
@@ -290,14 +300,16 @@ const SettingPage = () => {
                                                         className='hidden'
                                                     />
                                                 </label>
-                                                <button
-                                                    type="button"
-                                                    onClick={removeImage}
-                                                    className='flex items-center px-4 py-3 hover:bg-red-50 w-full text-left text-sm transition-colors'
-                                                >
-                                                    <X size={16} className='mr-3 text-red-500' />
-                                                    Remove Photo
-                                                </button>
+                                                {profileImage && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={removeImage}
+                                                        className='flex items-center px-4 py-3 hover:bg-red-50 w-full text-left text-sm transition-colors'
+                                                    >
+                                                        <X size={16} className='mr-3 text-red-500' />
+                                                        Remove Photo
+                                                    </button>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -306,6 +318,7 @@ const SettingPage = () => {
                                         <h4 className='text-lg font-semibold text-indigo-900'>
                                             {formData.firstName} {formData.lastName}
                                         </h4>
+                                        <p className='text-indigo-500 text-sm font-medium'>@{formData.username}</p>
                                         <p className='text-indigo-600 text-sm'>{formData.email}</p>
                                         <p className='text-indigo-600 text-sm'>{formData.phone}</p>
                                     </div>
@@ -340,7 +353,7 @@ const SettingPage = () => {
                                     </button>
                                 </div>
 
-                                <form onSubmit={handleSubmit(onSubmit)} className='space-y-6'>
+                                <div className='space-y-6'>
                                     {/* Name Row */}
                                     <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
                                         <div>
@@ -408,6 +421,49 @@ const SettingPage = () => {
                                                 <p className='text-red-500 text-sm mt-1'>{errors.lastName.message}</p>
                                             )}
                                         </div>
+                                   </div>
+                                    <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+                                    {/* Username */}
+                                    <div>
+                                        <label className='block text-sm font-medium text-indigo-900 mb-2'>
+                                            Username
+                                            {renderFieldIcon('username')}
+                                        </label>
+                                        <Controller
+                                            name="username"
+                                            control={control}
+                                            rules={{ 
+                                                required: 'Username is required',
+                                                minLength: {
+                                                    value: 3,
+                                                    message: 'Username must be at least 3 characters'
+                                                },
+                                                maxLength: {
+                                                    value: 20,
+                                                    message: 'Username must not exceed 20 characters'
+                                                },
+                                                pattern: {
+                                                    value: /^[a-zA-Z0-9_]+$/,
+                                                    message: 'Username can only contain letters, numbers, and underscores'
+                                                }
+                                            }}
+                                            render={({ field }) => (
+                                                <div className='relative'>
+                                                    <User size={18} className='absolute left-3 top-3 text-indigo-400' />
+                                                    <input
+                                                        {...field}
+                                                        placeholder="Enter username"
+                                                        disabled={!isEditing}
+                                                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors ${
+                                                            !isEditing ? 'bg-indigo-50 cursor-not-allowed' : 'bg-white'
+                                                        } ${errors.username ? 'border-red-500' : 'border-indigo-300'}`}
+                                                    />
+                                                </div>
+                                            )}
+                                        />
+                                        {errors.username && (
+                                            <p className='text-red-500 text-sm mt-1'>{errors.username.message}</p>
+                                        )}
                                     </div>
 
                                     {/* Email */}
@@ -444,9 +500,11 @@ const SettingPage = () => {
                                             <p className='text-red-500 text-sm mt-1'>{errors.email.message}</p>
                                         )}
                                     </div>
-
+                                    </div>
+                                    <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+                                      {/* phonee number */}
+                                       <div>
                                     {/* Phone */}
-                                    <div>
                                         <label className='block text-sm font-medium text-indigo-900 mb-2'>
                                             Phone Number
                                             {renderFieldIcon('phone')}
@@ -480,11 +538,48 @@ const SettingPage = () => {
                                         )}
                                     </div>
 
+                                    {/* Password */}
+                                    <div>
+                                        <label className='block text-sm font-medium text-indigo-900 mb-2'>
+                                            Password
+                                            {renderFieldIcon('password')}
+                                        </label>
+                                        <Controller
+                                            name="password"
+                                            control={control}
+                                            rules={{
+                                                required: 'Password is required',
+                                                minLength: {
+                                                    value: 8,
+                                                    message: 'Password must be at least 8 characters'
+                                                }
+                                            }}
+                                            render={({ field }) => (
+                                                <div className='relative'>
+                                                    <Lock size={18} className='absolute left-3 top-3 text-indigo-400' />
+                                                    <input
+                                                        {...field}
+                                                        type="password"
+                                                        disabled={!isEditing}
+                                                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors ${
+                                                            !isEditing ? 'bg-indigo-50 cursor-not-allowed' : 'bg-white'
+                                                        } ${errors.password ? 'border-red-500' : 'border-indigo-300'}`}
+                                                    />
+                                                </div>
+                                            )}
+                                        />
+                                        {errors.password && (
+                                            <p className='text-red-500 text-sm mt-1'>{errors.password.message}</p>
+                                        )}
+                                    </div>
+                                    </div>
+
                                     {/* Save Button */}
                                     {isEditing && (
                                         <div className='flex justify-end pt-4'>
                                             <button
-                                                type="submit"
+                                                type="button"
+                                                onClick={handleSubmit(onSubmit)}
                                                 disabled={isLoading}
                                                 className={`flex items-center px-8 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 shadow-md ${
                                                     isLoading ? 'opacity-50 cursor-not-allowed' : ''
@@ -504,7 +599,7 @@ const SettingPage = () => {
                                             </button>
                                         </div>
                                     )}
-                                </form>
+                                </div>
                             </div>
                         </div>
                     </div>

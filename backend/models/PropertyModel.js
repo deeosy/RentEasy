@@ -37,33 +37,66 @@
 
 // Import mongoose to create the database schema
 const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
 
-const PropertySchema = new Schema({
-  title: { type: String, required: true },
-  description: { type: String, required: true },
-  price: { type: Number, required: true },
-  location: {
-    gps: {
-      latitude: { type: Number },
-      longitude: { type: Number },
-    },
-    ghanaPostAddress: { type: String },
+// Schema for Property
+const propertySchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
   },
-  type: { type: String, enum: ['room', 'building', 'apartment', 'townhouse'], required: true },
-  images: [{ type: String }],
-  beds: { type: Number, default: 0 },
-  baths: { type: Number, default: 0 },
-  paymentStatus: { type: String, default: 'pending' },
-  owner: { type: Schema.Types.ObjectId, ref: 'users', required: true },
+  title: {
+    type: String,
+    required: true,
+  },
+  description: {
+    type: String,
+    required: true,
+  },
+  price: {
+    type: Number,
+    required: true,
+  },
+  location: {
+    type: {
+      gps: {
+        latitude: { type: Number },
+        longitude: { type: Number },
+      },
+      ghanaPostAddress: {
+        type: String,
+        match: [/^[A-Z]{2}-[0-9]{3}-[0-9]{4}$/, 'Invalid Ghana Post Digital Address format'],
+      },
+    },
+    required: true,
+    validate: {
+      validator: function (v) {
+        return (v.gps && v.gps.latitude && v.gps.longitude) || v.ghanaPostAddress;
+      },
+      message: 'Either GPS coordinates or Ghana Post Digital Address is required',
+    },
+  },
+  type: {
+    type: String,
+    enum: ['room', 'building', 'apartment', 'townhouse'],
+    required: true,
+  },
+  beds: {
+    type: Number,
+    default: 0,
+  },
+  baths: {
+    type: Number,
+    default: 0,
+  },
+  images: {
+    type: [String],
+    default: [],
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
 });
 
-PropertySchema.pre('validate', function (next) {
-  if (!this.location.gps.latitude && !this.location.gps.longitude && !this.location.ghanaPostAddress) {
-    next(new Error('Either GPS coordinates or Ghana Post Digital Address is required'));
-  } else {
-    next();
-  }
-});
-
-module.exports = mongoose.model('Property', PropertySchema);
+module.exports = mongoose.model('Property', propertySchema);

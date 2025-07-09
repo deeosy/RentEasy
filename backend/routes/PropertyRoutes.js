@@ -11,25 +11,29 @@
 
 // module.exports = router
 
+// Import required modules
 const express = require('express');
-const { createProperty, confirmPayment, getProperties, getPropertyById } = require('../controllers/PropertyControllers');
-const { authenticate } = require('../middleware/authMiddleware');
-const upload = require('../middleware/multer');
-
-// Debugging imports
-console.log('authenticate:', typeof authenticate);
-console.log('upload.array:', typeof upload.array);
-console.log('createProperty:', typeof createProperty);
-console.log('confirmPayment:', typeof confirmPayment);
-console.log('getProperties:', typeof getProperties);
-console.log('getPropertyById:', typeof getPropertyById);
-
 const router = express.Router();
+const multer = require('multer');
+const { createProperty, confirmPayment, getProperties } = require('../controllers/PropertyControllers');
+const authMiddleware = require('../middleware/authMiddleware');
 
-// Routes for property management
-router.post('/', authenticate, upload.array('images', 5), createProperty);
-router.post('/confirm-payment', authenticate, confirmPayment);
-router.get('/', getProperties);
-router.get('/:id', getPropertyById);
+// Configure multer for file uploads (store in memory for Firebase)
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024, files: 5 }, // 5MB per file, max 5 files
+});
+
+// Routes for properties
+router.get('/', getProperties); // Get all properties
+router.post('/', authMiddleware, upload.array('images', 5), (req, res, next) => {
+  console.log('POST /api/properties received:', {
+    body: req.body,
+    files: req.files ? req.files.map(f => f.originalname) : [],
+  });
+  createProperty(req, res, next);
+}); // Create a new property
+router.post('/confirm-payment', authMiddleware, confirmPayment); // Confirm payment and save property
 
 module.exports = router;

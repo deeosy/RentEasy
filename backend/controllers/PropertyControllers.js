@@ -175,118 +175,132 @@
 // module.exports = {createProperty, confirmPropertyPayment, getAllProperties, upload}
 
 
-const PropertyModel = require('../models/PropertyModel');
-const { initializePayment, verifyPayment } = require('../utils/paystack');
+// Import required modules
+const Property = require('../models/PropertyModel');
 const { uploadImagesToFirebase } = require('../utils/firebaseStorage');
+const axios = require('axios');
+require('dotenv').config();
 
-const createProperty = async (req, res) => {
+// Create a new property
+exports.createProperty = async (req, res) => {
   try {
-    const {
-      title,
-      description,
-      price,
-      'location[gps][latitude]': latitude,
-      'location[gps][longitude]': longitude,
-      'location[ghanaPostAddress]': ghanaPostAddressRaw,
-    } = req.body;
+    console.log('Received req.body:', req.body);
+    console.log('Received files:', req.files);
 
-    // Normalize ghanaPostAddress: trim spaces and convert to uppercase
-    const ghanaPostAddress = ghanaPostAddressRaw ? ghanaPostAddressRaw.trim().toUpperCase() : null;
-    console.log('POST /api/properties received:', {
-      body: req.body,
-      files: req.files,
-      normalizedGhanaPostAddress: ghanaPostAddress,
-    });
+    const { title, description, price, type, beds, baths } = req.body;
+    const location = {
+      gps: {
+        latitude: req.body['location[gps][latitude]'] ? parseFloat(req.body['location[gps][latitude]']) : undefined,
+        longitude: req.body['location[gps][longitude]'] ? parseFloat(req.body['location[gps][longitude]']) : undefined,
+      },
+      ghanaPostAddress: req.body['location[ghanaPostAddress]'] || undefined,
+    };
 
-    if (!ghanaPostAddress && (!latitude || !longitude)) {
-      return res.status(400).json({ message: 'Either GPS coordinates or Ghana Post Digital Address is required' });
+    if (!title || !description || !price || !type) {
+      return res.status(400).json({ message: 'All required fields must be provided' });
     }
 
-    if (ghanaPostAddress && !/^[A-Z]{2}-[0-9]{3}-[0-9]{4}$/.test(ghanaPostAddress)) {
-      return res.status(400).json({ message: `Invalid Ghana Post Address format: ${ghanaPostAddress} (expected format: GA-123-4567)` });
-    }
-
-    const images = req.files ? await uploadImagesToFirebase(req.files, req.user.id) : [];
+    // Count user's existing properties
+    const userPropertyCount = await Property.countDocuments({ userId: req.user.id });
+    console.log('User property count:', userPropertyCount);
 
     const propertyData = {
+      userId: req.user.id,
       title,
       description,
       price: parseFloat(price),
-      location: {
-        gps: latitude && longitude ? { latitude: parseFloat(latitude), longitude: parseFloat(longitude) } : undefined,
-        ghanaPostAddress: ghanaPostAddress || undefined,
-      },
-      type: req.body.type,
-      beds: parseInt(req.body.beds) || 0,
-      baths: parseInt(req.body.baths) || 0,
-      images,
-      owner: req.user.id,
+      location,
+      type,
+      beds: parseInt(beds) || 0,
+      baths: parseInt(baths) || 0,
     };
 
-    const property = new PropertyModel(propertyData);
-    const savedProperty = await property.save();
-
-    const payment = await initializePayment(req.user.email, 1000, savedProperty._id);
-    if (!payment) {
-      await PropertyModel.deleteOne({ _id: savedProperty._id });
-      return res.status(500).json({ message: 'Failed to initialize payment' });
+    // Handle image uploads
+    let imageUrls = [];
+    if (req.files && req.files.length > 0) {
+      imageUrls = await uploadImagesToFirebase(req.files);
+      propertyData.images = imageUrls;
     }
 
-    res.status(201).json({
-      message: 'Property created, proceed to payment',
-      paymentUrl: payment.data.authorization_url,
-      reference: payment.data.reference,
-      propertyData,
-      property: savedProperty,
-    });
+    // Check if payment is required (3rd or subsequent listing)
+    if (userPropertyCount >= 2) {
+      const paymentResponse = await axios.post(
+        'https://api.paystack.co/transaction/initialize',
+        {
+          email: req.user.email,
+          amount: 5000, // 50 GHS in kobo
+          reference: `prop_${Date.now()}_${req.user.id}`,
+          callback_url: 'http://localhost:4001/api/properties/confirm-payment',
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (paymentResponse.data.status) {
+        return res.status(200).json({
+          paymentUrl: paymentResponse.data.data.authorization_url,
+          reference: paymentResponse.data.data.reference,
+          propertyData,
+          message: 'Payment required for this listing',
+        });
+      } else {
+        console.error('Paystack initialization error:', paymentResponse.data);
+        return res.status(500).json({ message: 'Payment initialization failed' });
+      }
+    }
+
+    // Save property if no payment is required
+    const property = new Property(propertyData);
+    await property.save();
+    console.log('Property saved:', property);
+    res.status(201).json({ message: 'Property created successfully', property });
   } catch (err) {
     console.error('Create property error:', err);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: err.message || 'Internal server error' });
   }
 };
 
-const confirmPayment = async (req, res) => {
+// Confirm payment and save property
+exports.confirmPayment = async (req, res) => {
   try {
     const { reference, propertyData } = req.body;
-    const payment = await verifyPayment(reference);
-    if (!payment || payment.data.status !== 'success') {
+
+    // Verify payment with Paystack
+    const paymentResponse = await axios.get(`https://api.paystack.co/transaction/verify/${reference}`, {
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+      },
+    });
+
+    if (paymentResponse.data.data.status !== 'success') {
       return res.status(400).json({ message: 'Payment verification failed' });
     }
 
-    const property = new PropertyModel({
+    // Save property after successful payment
+    const property = new Property({
       ...propertyData,
-      paymentStatus: 'completed',
+      userId: req.user.id,
     });
     await property.save();
-
-    res.status(200).json({ message: 'Property posted successfully', property });
+    console.log('Property saved after payment:', property);
+    res.status(201).json({ message: 'Property created successfully after payment', property });
   } catch (err) {
     console.error('Confirm payment error:', err);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: err.message || 'Internal server error' });
   }
 };
 
-const getProperties = async (req, res) => {
+// Get all properties
+exports.getProperties = async (req, res) => {
   try {
-    const properties = await PropertyModel.find().populate('owner', 'username email');
+    const properties = await Property.find();
     res.status(200).json({ properties });
   } catch (err) {
     console.error('Get properties error:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
 };
-
-const getPropertyById = async (req, res) => {
-  try {
-    const property = await PropertyModel.findById(req.params.id).populate('owner', 'username email');
-    if (!property) {
-      return res.status(404).json({ message: 'Property not found' });
-    }
-    res.status(200).json({ property });
-  } catch (err) {
-    console.error('Get property by ID error:', err);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-
-module.exports = { createProperty, confirmPayment, getProperties, getPropertyById };

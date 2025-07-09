@@ -90,7 +90,7 @@ import axios from 'axios';
 // Zustand store for managing user and property state
 const usePropertyStore = create(
   persist(
-    (set, get) => ({
+    (set) => ({
       user: null,
       properties: [],
       isAuth: false,
@@ -180,14 +180,7 @@ const usePropertyStore = create(
           const response = await axios.post('http://localhost:4001/api/properties', formData, {
             withCredentials: true,
           });
-
-          // Update properties state with new property
-          const newProperty = response.data.property;
-          set((state) => ({
-            properties: [...state.properties, newProperty],
-          }));
-
-          return { ...response.data, success: true };
+          return response.data;
         } catch (err) {
           console.error('Add property error:', err.response?.data || err.message);
           return { success: false, message: err.response?.data?.message || 'Failed to create property' };

@@ -5,7 +5,7 @@ import defaultImage from '../icons/defaultUser.svg'
 import { toast } from 'react-toastify';
 
 export default function Header() {
-    const { isAuth, signOut } = usePropertyStore();
+    const { isAuth, signOut, user } = usePropertyStore();
     const location = useLocation();
     const navigate = useNavigate();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -102,9 +102,9 @@ export default function Header() {
                                         aria-label="User menu"
                                     >
                                         <img
-                                            src={defaultImage}
+                                            src={user?.profileImage || defaultImage}
                                             alt="Profile image"
-                                            className='hidden md:block h-12 cursor-pointer  rounded-full hover:scale-105 transition-transform duration-200'
+                                            className='hidden md:block h-11 w-11 cursor-pointer object-cover object-center rounded-full hover:scale-105 transition-transform duration-200'
                                         />
                                     </button>
                                     {isDropdownOpen && (

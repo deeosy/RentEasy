@@ -229,48 +229,90 @@
 //     </div>
 //   );
 // }
-import React, { useState } from 'react';
+
+
+import React, { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import usePropertyStore from '../store/usePropertyStore';
 
 export default function ListPropertyPage() {
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    price: '',
-    type: '',
-    beds: '',
-    baths: '',
-    ghanaPostAddress: '',
-    latitude: '',
-    longitude: '',
+  const { register, handleSubmit, setValue, formState: { errors, isValid } } = useForm({
+    mode: 'onChange',
+    defaultValues: {
+      title: '',
+      description: '',
+      price: '',
+      type: '',
+      beds: '',
+      baths: '',
+      ghanaPostAddress: '',
+      latitude: '',
+      longitude: '',
+    },
   });
   const [images, setImages] = useState([]);
+  const [useAutoLocation, setUseAutoLocation] = useState(false);
+  const [autoLocation, setAutoLocation] = useState({ latitude: '', longitude: '' });
   const navigate = useNavigate();
   const { addProperty } = usePropertyStore();
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  // Fetch user location when switching to auto
+  useEffect(() => {
+    if (useAutoLocation && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setAutoLocation({ latitude, longitude });
+          setValue('latitude', latitude.toString());
+          setValue('longitude', longitude.toString());
+          toast.info('Location fetched successfully');
+        },
+        (error) => {
+          console.error('Geolocation error:', error);
+          toast.error('Failed to fetch location. Please enable location services or enter manually.');
+          setUseAutoLocation(false); // Revert to manual if geolocation fails
+        }
+      );
+    }
+  }, [useAutoLocation, setValue]);
 
   const handleImageChange = (e) => {
-    setImages([...e.target.files]);
+    const files = Array.from(e.target.files).slice(0, 5); // Limit to 5 images
+    setImages(files);
+    setValue('images', files); // Update form value for images
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const toggleLocationMode = () => {
+    setUseAutoLocation((prev) => !prev);
+    if (!useAutoLocation) {
+      // Clear manual inputs when switching to auto
+      setValue('latitude', '');
+      setValue('longitude', '');
+    } else {
+      // Clear auto location when switching to manual
+      setAutoLocation({ latitude: '', longitude: '' });
+    }
+  };
+
+  const onSubmit = async (data) => {
+    // Validate location
+    if (!data.ghanaPostAddress && (!data.latitude || !data.longitude)) {
+      toast.error('Either Ghana Post Address or GPS coordinates are required.');
+      return;
+    }
+
     const formDataToSend = new FormData();
-    formDataToSend.append('title', formData.title);
-    formDataToSend.append('description', formData.description);
-    formDataToSend.append('price', formData.price);
-    formDataToSend.append('type', formData.type);
-    formDataToSend.append('beds', formData.beds);
-    formDataToSend.append('baths', formData.baths);
-    formDataToSend.append('location[ghanaPostAddress]', formData.ghanaPostAddress);
-    formDataToSend.append('location[gps][latitude]', formData.latitude);
-    formDataToSend.append('location[gps][longitude]', formData.longitude);
+    formDataToSend.append('title', data.title);
+    formDataToSend.append('description', data.description);
+    formDataToSend.append('price', data.price);
+    formDataToSend.append('type', data.type);
+    formDataToSend.append('beds', data.beds);
+    formDataToSend.append('baths', data.baths);
+    formDataToSend.append('location[ghanaPostAddress]', data.ghanaPostAddress);
+    formDataToSend.append('location[gps][latitude]', useAutoLocation ? autoLocation.latitude : data.latitude);
+    formDataToSend.append('location[gps][longitude]', useAutoLocation ? autoLocation.longitude : data.longitude);
     images.forEach((image) => formDataToSend.append('images', image));
 
     // Log FormData for debugging
@@ -294,123 +336,209 @@ export default function ListPropertyPage() {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">List a Property</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label>Title</label>
+    <div className="container mx-auto p-4 max-w-2xl">
+      <h1 className="text-3xl font-bold text-center text-indigo-900 mb-8">List a Property</h1>
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6 text-indigo-900">
+        <div className="flex flex-col">
+          <label className="text-sm font-medium mb-1">Title *</label>
           <input
             type="text"
-            name="title"
-            value={formData.title}
-            onChange={handleChange}
-            className="border p-2 w-full"
-            required
+            {...register('title', { required: 'Title is required' })}
+            className="rounded-xl bg-gray-300 px-4 py-3 placeholder-indigo-900 focus:outline-none"
+            placeholder="e.g., Cozy 2-Bedroom Apartment"
           />
+          {errors.title && (
+            <span className="text-red-500 text-sm mt-1">{errors.title.message}</span>
+          )}
         </div>
-        <div>
-          <label>Description</label>
+
+        <div className="flex flex-col">
+          <label className="text-sm font-medium mb-1">Description *</label>
           <textarea
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-            className="border p-2 w-full"
-            required
+            {...register('description', { required: 'Description is required' })}
+            className="rounded-xl bg-gray-300 px-4 py-3 placeholder-indigo-900 focus:outline-none h-32 resize-none"
+            placeholder="Describe your property..."
           />
+          {errors.description && (
+            <span className="text-red-500 text-sm mt-1">{errors.description.message}</span>
+          )}
         </div>
-        <div>
-          <label>Price (GHS)</label>
+
+        <div className="flex flex-col">
+          <label className="text-sm font-medium mb-1">Price (GHS) *</label>
           <input
             type="number"
-            name="price"
-            value={formData.price}
-            onChange={handleChange}
-            className="border p-2 w-full"
-            required
+            {...register('price', {
+              required: 'Price is required',
+              min: { value: 0, message: 'Price must be a positive number' },
+            })}
+            className="rounded-xl bg-gray-300 px-4 py-3 placeholder-indigo-900 focus:outline-none"
+            placeholder="e.g., 1500"
           />
+          {errors.price && (
+            <span className="text-red-500 text-sm mt-1">{errors.price.message}</span>
+          )}
         </div>
-        <div>
-          <label>Property Type</label>
+
+        <div className="flex flex-col">
+          <label className="text-sm font-medium mb-1">Property Type *</label>
           <select
-            name="type"
-            value={formData.type}
-            onChange={handleChange}
-            className="border p-2 w-full"
-            required
+            {...register('type', { required: 'Property type is required' })}
+            className="rounded-xl bg-gray-300 px-4 py-3 placeholder-indigo-900 focus:outline-none"
           >
             <option value="">Select Type</option>
             <option value="apartment">Apartment</option>
             <option value="house">House</option>
             <option value="condo">Condo</option>
           </select>
+          {errors.type && (
+            <span className="text-red-500 text-sm mt-1">{errors.type.message}</span>
+          )}
         </div>
-        <div>
-          <label>Beds</label>
+
+        <div className="flex flex-col">
+          <label className="text-sm font-medium mb-1">Beds *</label>
           <input
             type="number"
-            name="beds"
-            value={formData.beds}
-            onChange={handleChange}
-            className="border p-2 w-full"
-            required
+            {...register('beds', {
+              required: 'Number of beds is required',
+              min: { value: 1, message: 'Beds must be at least 1' },
+            })}
+            className="rounded-xl bg-gray-300 px-4 py-3 placeholder-indigo-900 focus:outline-none"
+            placeholder="e.g., 2"
           />
+          {errors.beds && (
+            <span className="text-red-500 text-sm mt-1">{errors.beds.message}</span>
+          )}
         </div>
-        <div>
-          <label>Baths</label>
+
+        <div className="flex flex-col">
+          <label className="text-sm font-medium mb-1">Baths *</label>
           <input
             type="number"
-            name="baths"
-            value={formData.baths}
-            onChange={handleChange}
-            className="border p-2 w-full"
-            required
+            {...register('baths', {
+              required: 'Number of baths is required',
+              min: { value: 1, message: 'Baths must be at least 1' },
+            })}
+            className="rounded-xl bg-gray-300 px-4 py-3 placeholder-indigo-900 focus:outline-none"
+            placeholder="e.g., 1"
           />
+          {errors.baths && (
+            <span className="text-red-500 text-sm mt-1">{errors.baths.message}</span>
+          )}
         </div>
-        <div>
-          <label>Ghana Post Address</label>
+
+        <div className="flex flex-col">
+          <label className="text-sm font-medium mb-1">Ghana Post Address</label>
           <input
             type="text"
-            name="ghanaPostAddress"
-            value={formData.ghanaPostAddress}
-            onChange={handleChange}
-            className="border p-2 w-full"
+            {...register('ghanaPostAddress', {
+              pattern: {
+                value: /^[A-Z]{2}-\d{3}-\d{4}$/,
+                message: 'Invalid Ghana Post Address (e.g., GA-123-4567)',
+              },
+            })}
+            className="rounded-xl bg-gray-300 px-4 py-3 placeholder-indigo-900 focus:outline-none"
             placeholder="e.g., GA-123-4567"
           />
+          {errors.ghanaPostAddress && (
+            <span className="text-red-500 text-sm mt-1">{errors.ghanaPostAddress.message}</span>
+          )}
         </div>
-        <div>
-          <label>Latitude (optional)</label>
-          <input
-            type="number"
-            name="latitude"
-            value={formData.latitude}
-            onChange={handleChange}
-            className="border p-2 w-full"
-            step="any"
-          />
+
+        <div className="flex flex-col">
+          <label className="text-sm font-medium mb-1">Location Input Method</label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={toggleLocationMode}
+              className={`flex-1 py-2 rounded-xl font-medium transition-colors duration-150 ${
+                useAutoLocation
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-300 text-indigo-900 hover:bg-gray-400'
+              }`}
+            >
+              Auto
+            </button>
+            <button
+              type="button"
+              onClick={toggleLocationMode}
+              className={`flex-1 py-2 rounded-xl font-medium transition-colors duration-150 ${
+                !useAutoLocation
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-300 text-indigo-900 hover:bg-gray-400'
+              }`}
+            >
+              Manual
+            </button>
+          </div>
+          {useAutoLocation && (
+            <p className="text-sm text-gray-600 mt-1">
+              {autoLocation.latitude && autoLocation.longitude
+                ? `Detected: Lat ${autoLocation.latitude}, Lon ${autoLocation.longitude}`
+                : 'Fetching location...'}
+            </p>
+          )}
         </div>
-        <div>
-          <label>Longitude (optional)</label>
-          <input
-            type="number"
-            name="longitude"
-            value={formData.longitude}
-            onChange={handleChange}
-            className="border p-2 w-full"
-            step="any"
-          />
-        </div>
-        <div>
-          <label>Images (up to 5)</label>
+
+        {!useAutoLocation && (
+          <>
+            <div className="flex flex-col">
+              <label className="text-sm font-medium mb-1">Latitude (optional)</label>
+              <input
+                type="number"
+                {...register('latitude', {
+                  validate: (value) =>
+                    !value || (value >= -90 && value <= 90) || 'Latitude must be between -90 and 90',
+                })}
+                className="rounded-xl bg-gray-300 px-4 py-3 placeholder-indigo-900 focus:outline-none"
+                step="any"
+                placeholder="e.g., 5.6037"
+              />
+              {errors.latitude && (
+                <span className="text-red-500 text-sm mt-1">{errors.latitude.message}</span>
+              )}
+            </div>
+            <div className="flex flex-col">
+              <label className="text-sm font-medium mb-1">Longitude (optional)</label>
+              <input
+                type="number"
+                {...register('longitude', {
+                  validate: (value) =>
+                    !value || (value >= -180 && value <= 180) || 'Longitude must be between -180 and 180',
+                })}
+                className="rounded-xl bg-gray-300 px-4 py-3 placeholder-indigo-900 focus:outline-none"
+                step="any"
+                placeholder="e.g., -0.1870"
+              />
+              {errors.longitude && (
+                <span className="text-red-500 text-sm mt-1">{errors.longitude.message}</span>
+              )}
+            </div>
+          </>
+        )}
+
+        <div className="flex flex-col">
+          <label className="text-sm font-medium Remedialmb-1">Images (up to 5)</label>
           <input
             type="file"
-            name="images"
             multiple
             accept="image/*"
             onChange={handleImageChange}
-            className="border p-2 w-full"
+            className="border p-2 w-full text-gray-700"
           />
+          {images.length > 5 && (
+            <span className="text-red-500 text-sm mt-1">Maximum 5 images allowed</span>
+          )}
         </div>
-        <button type="submit" className="bg-blue-500 text-white p-2 rounded">
+
+        <button
+          type="submit"
+          disabled={!isValid || images.length > 5}
+          className={`bg-indigo-600 text-white px-6 py-3 rounded-xl font-medium w-fit mx-auto cursor-pointer transition-colors duration-150 ${
+            !isValid || images.length > 5 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-indigo-700'
+          }`}
+        >
           Submit Property
         </button>
       </form>

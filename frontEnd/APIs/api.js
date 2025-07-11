@@ -39,7 +39,30 @@
 //     }
 // }
 
+
+
+
+
+
+
 import axios from 'axios';
+import { signInWithCustomToken } from 'firebase/auth'
+import { auth } from '../src/firebase';
+
+export const SignUpUser = async (username, email, phone, password, firstName, lastName) => {
+  try {
+    const response = await axios.post(
+      'http://localhost:4001/api/users/signup',
+      { username, email, phone, password, firstName, lastName },
+      { withCredentials: true }
+    );
+
+    return response.data;
+  } catch (err) {
+    console.error('API SignUp error:', err);
+    throw err;
+  }
+};
 
 export const LoginUser = async (email, password) => {
   try {
@@ -48,23 +71,10 @@ export const LoginUser = async (email, password) => {
       { email, password },
       { withCredentials: true }
     );
+
     return response.data;
   } catch (err) {
     console.error('API Login error:', err);
-    throw err;
-  }
-};
-
-export const SignUpUser = async (username, email, phone, password) => {
-  try {
-    const response = await axios.post(
-      'http://localhost:4001/api/users/signup',
-      { username, email, phone, password },
-      { withCredentials: true }
-    );
-    return response.data;
-  } catch (err) {
-    console.error('API SignUp error:', err);
     throw err;
   }
 };
@@ -76,6 +86,7 @@ export const SignOutUser = async () => {
       {},
       { withCredentials: true }
     );
+
     return response.data;
   } catch (err) {
     console.error('API SignOut error:', err);

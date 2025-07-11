@@ -82,10 +82,13 @@
 // export default usePropertyStore;
 
 
+
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { LoginUser, SignOutUser, SignUpUser } from '../../APIs/api';
 import axios from 'axios';
+import { signInWithFirebaseToken, auth } from '../firebase'
 
 // Zustand store for managing user and property state
 const usePropertyStore = create(
@@ -99,7 +102,8 @@ const usePropertyStore = create(
         try {
           const response = await axios.get('http://localhost:4001/api/users', { withCredentials: true });
           if (response.status === 200) {
-            const { user } = response.data;
+            const { user, firebaseToken } = response.data;
+            await signInWithFirebaseToken(firebaseToken) // sign in to firebase with custom token
             set({ user, isAuth: true });
             return { success: true, user };
           } else {
@@ -113,9 +117,10 @@ const usePropertyStore = create(
         }
       },
       // Sign up a new user
-      signUp: async (username, email, phone, password) => {
+      signUp: async (username, email, phone, password, firstName, lastName) => {
         try {
-          const response = await SignUpUser(username, email, phone, password);
+          const response = await SignUpUser(username, email, phone, password, firstName, lastName);
+          await signInWithFirebaseToken(response.firebaseToken) // sign in to firebase with custom token
           set({ user: response.user, isAuth: true });
           return { success: true, message: 'Sign up successful', user: response.user };
         } catch (err) {
@@ -127,6 +132,7 @@ const usePropertyStore = create(
       login: async (email, password) => {
         try {
           const response = await LoginUser(email, password);
+          await signInWithFirebaseToken(response.firebaseToken) // sign in to firebase with custom token
           set({ user: response.user, isAuth: true });
           return { success: true, message: 'Login successful', user: response.user };
         } catch (err) {
@@ -137,7 +143,8 @@ const usePropertyStore = create(
       // Sign out a user
       signOut: async () => {
         try {
-          await SignOutUser();
+          await SignOutUser(); // sign out with the signout function from the backend
+          await auth.signOut(); // sign out from firebase using the sign out function from auth in firebase config
           set({ user: null, isAuth: false, properties: [] });
           return { success: true, message: 'Sign out successful' };
         } catch (err) {
@@ -162,20 +169,20 @@ const usePropertyStore = create(
           formData.append('baths', propertyData.baths || 0);
           files.forEach((file) => formData.append('images', file));
 
-          // Log FormData for debugging
-          const formDataLog = {
-            title: propertyData.title,
-            description: propertyData.description,
-            price: propertyData.price,
-            'location[gps][latitude]': propertyData.location.gps.latitude || '',
-            'location[gps][longitude]': propertyData.location.gps.longitude || '',
-            'location[ghanaPostAddress]': propertyData.location.ghanaPostAddress || '',
-            type: propertyData.type,
-            beds: propertyData.beds || 0,
-            baths: propertyData.baths || 0,
-            images: files.length,
-          };
-          console.log('FormData sent:', formDataLog);
+          // // Log FormData for debugging
+          // const formDataLog = {
+          //   title: propertyData.title,
+          //   description: propertyData.description,
+          //   price: propertyData.price,
+          //   'location[gps][latitude]': propertyData.location.gps.latitude || '',
+          //   'location[gps][longitude]': propertyData.location.gps.longitude || '',
+          //   'location[ghanaPostAddress]': propertyData.location.ghanaPostAddress || '',
+          //   type: propertyData.type,
+          //   beds: propertyData.beds || 0,
+          //   baths: propertyData.baths || 0,
+          //   images: files.length,
+          // };
+          // console.log('FormData sent:', formDataLog);
 
           const response = await axios.post('http://localhost:4001/api/properties', formData, {
             withCredentials: true,

@@ -7,6 +7,9 @@ const UserSchema = new Schema({
     email: {type: String, required: true},
     password: {type: String, required: true},
     phone: {type: String, required: true},
+    firstName: { type: String, default: null },
+    lastName: { type: String, default: null },
+    profileImage: { type: String, default: null },
     createdAt: {type: Date, default: Date.now},
     resetPasswordToken: {type: String, default: null},
     resetPasswordExpires: {type: Date, default: null}

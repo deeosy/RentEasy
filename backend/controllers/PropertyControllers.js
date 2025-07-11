@@ -175,6 +175,11 @@
 // module.exports = {createProperty, confirmPropertyPayment, getAllProperties, upload}
 
 
+
+
+
+
+
 // Import required modules
 const Property = require('../models/PropertyModel');
 const { uploadImagesToFirebase } = require('../utils/firebaseStorage');
@@ -196,7 +201,7 @@ exports.createProperty = async (req, res) => {
       ghanaPostAddress: req.body['location[ghanaPostAddress]'] || undefined,
     };
 
-    if (!title || !description || !price || !type) {
+    if (!title || !description || !price || !type || !beds || !baths) {
       return res.status(400).json({ message: 'All required fields must be provided' });
     }
 

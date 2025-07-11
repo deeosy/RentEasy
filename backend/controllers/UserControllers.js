@@ -174,6 +174,7 @@ const UserModel = require('../models/UserModel')
 const bcrypt = require("bcryptjs")
 const jwt = require('jsonwebtoken')
 const nodemailer = require('nodemailer')
+const admin = require('../utils/firebaseConfig')
 
 require('dotenv').config()
 
@@ -193,7 +194,13 @@ const authCheck = async (req, res) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY)
         const user = await UserModel.findById(decoded.id)
         if(!user) return res.status(404).json({ message: "User not found"})
-        res.status(200).json({user: {id: user._id, username: user.username, email: user.email}})
+
+        const firebaseToken = await admin.auth().createCustomToken(user._id.toString())  // Generate Firebase custom token upon login based on userID
+        res.status(200).json({
+            user: {id: user._id, username: user.username, email: user.email, phone: user.phone, firstName: user.firstName, lastName: user.lastName, profileImage: user.profileImage}, 
+            firebaseToken, // include firebase token in response to send to the frontend
+            token,
+        })
     } catch (err) {
         res.status(401).json({message: "Unauthorized: Invalid token"})
     }
@@ -202,7 +209,7 @@ const authCheck = async (req, res) => {
 // create new user
 const signUp = async (req, res) => {
     try {
-        const {username, email, password, phone} = req.body;
+        const {username, email, password, phone, firstName, lastName} = req.body;
         if(!username || !email || !password || !phone ) {
             return res.status(400).json({message: "All fields are required"})
         }
@@ -211,13 +218,17 @@ const signUp = async (req, res) => {
         
         const hashedPassword = await bcrypt.hash(password, 10)
         
-        const user = new UserModel({ username, email, password: hashedPassword, phone })
+        const user = new UserModel({ username, email, password: hashedPassword, phone, firstName, lastName })
         const savedUser = await user.save()
         
         const token = jwt.sign({id:savedUser._id}, process.env.JWT_SECRET_KEY, {expiresIn: "1d"})
+        const firebaseToken = await admin.auth().createCustomToken(savedUser._id.toString());
 
         res.cookie("token", token, {httpOnly:true, secure: false, maxAge: 24*60*60*1000, sameSite: "strict"})
-        .status(200).json({message: "User created successfully", token, user: {id: savedUser._id, username: savedUser.username, email: savedUser.email}})
+            .status(200).json({message: "User created successfully", token, firebaseToken,
+                user: {id: savedUser._id, username: savedUser.username, email: savedUser.email, phone: savedUser.phone, firstName: savedUser.firstName, lastName: savedUser.lastName }
+            }
+        )
     } catch (err) {
         console.error('Sign up error:', err)
         res.status(500).json({message: "Internal server error"})
@@ -237,9 +248,10 @@ const signIn = async (req, res) => {
         if (!isPasswordSame) return res.status(400).json({message: "Invalid credentials"})
         
         const token = jwt.sign({id: user._id}, process.env.JWT_SECRET_KEY, {expiresIn: "1d"} )
+        const firebaseToken = await admin.auth().createCustomToken(user._id.toString());
 
         res.cookie("token", token, {httpOnly:true, secure: false, maxAge: 24*60*60*1000, sameSite: "strict" })
-        .status(200).json({message: "User signed in successfully", user: {id:user._id, username: user.username, email: user.email}})
+        .status(200).json({message: "User signed in successfully", firebaseToken, user: {id:user._id, username: user.username, email: user.email, phone: user.phone, firstName: user.firstName, lastName: user.lastName, profileImage: user.profileImage }})
     } catch (err) {
         console.error('Sign in error:', err)
         res.status(500).json({message: "Internal server error"})      
@@ -317,6 +329,58 @@ const confirmPasswordReset = async (req, res) => {
         console.error('Confirm password reset error:', err)
         res.status(500).json({message: "Internal server error"})        
     }
+    
 }
 
-module.exports = {signUp, signIn, signOut, authCheck, requestPasswordReset, confirmPasswordReset}
+// Update user profile
+const updateProfile = async (req, res) => {
+    try {
+        let token = req.cookies.token;
+
+        if (!token && req.headers.authorization){
+            const authHeader = req.headers.authorization;
+            if (authHeader.startsWith('Bearer ')) {
+                token = authHeader.split(' ')[1];
+            } 
+        } 
+        
+        if (!token) return res.status(401).json({ message: 'Unauthorized: No token provided' });
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+        const user = await UserModel.findById(decoded.id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const { firstName, lastName, username, email, phone, password, profileImage } = req.body;
+
+        // Update fields if provided
+        if (firstName) user.firstName = firstName;
+        if (lastName) user.lastName = lastName;
+        if (username) user.username = username;
+        if (email) user.email = email;
+        if (phone) user.phone = phone;
+        if (password) user.password = await bcrypt.hash(password, 10);
+        if (profileImage !== undefined) user.profileImage = profileImage; // Update profile image URL
+
+        await user.save();
+
+        res.status(200).json({
+            message: 'Profile updated successfully',
+            user: {
+                id: user._id,
+                username: user.username,
+                email: user.email,
+                phone: user.phone,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                profileImage: user.profileImage,
+            },
+        });
+
+        console.log('Received update request for:', req.url, 'Token:', token, 'Body:', req.body);
+    } catch (err) {
+        console.error('Update profile error:', err);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+module.exports = {signUp, signIn, signOut, authCheck, requestPasswordReset, confirmPasswordReset, updateProfile}

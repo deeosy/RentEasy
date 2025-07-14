@@ -17,6 +17,8 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import SettingPage from './pages/SettingPage';
 import ErrorBoundary from './component/ErrorBoundary';
+import { SearchPage } from './pages/SearchPage';
+
 
 function App() {
   const { isAuth, checkAuth } = usePropertyStore()
@@ -59,6 +61,7 @@ function App() {
         <Route path="/list-property" element={isAuth ? <ErrorBoundary> <ListPropertyPage  /> </ErrorBoundary>: <Navigate to="/" />} />
         <Route path="/access" element={<Access />} />
         <Route path="/settings"  element={<SettingPage />} />
+        <Route path="/search" element={<SearchPage/>} />
         {/* 
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/reset-password" element={<ResetPassword />} /> */}

@@ -191,9 +191,9 @@ export default function ListingDetailModal({ show, listing, onClose, onPremiumCl
     const allImages = [listing.imageUrl, ...(listing.additionalImages || [])];
 
     return (
-        <div className='fixed inset-0 z-50 flex items-center justify-center p-2 bg-black/60 backdrop-blur-sm'>
+        <div className='fixed inset-0 z-50 flex items-center justify-center p-1 sm:p-2 bg-black/60 backdrop-blur-sm'>
             {/* Modal Container - Perfectly Centered & Compact */}
-            <div className="relative w-full max-w-4xl h-[85vh] bg-white rounded-lg shadow-2xl overflow-hidden">
+            <div className="relative w-full max-w-4xl h-[95vh] sm:h-[90vh] md:h-[85vh] bg-white rounded-lg shadow-2xl overflow-hidden">
                 
                 {/* Close Button */}
                 <button 
@@ -208,8 +208,8 @@ export default function ListingDetailModal({ show, listing, onClose, onPremiumCl
                 {/* Main Layout */}
                 <div className="grid grid-cols-1 lg:grid-cols-5 h-full">
                     
-                    {/* Image Section - Takes 3/5 of space */}
-                    <div className="lg:col-span-3 relative bg-gray-900">
+                    {/* Image Section - Takes 3/5 of space on large screens, full width on mobile */}
+                    <div className="lg:col-span-3 relative bg-gray-900 h-[40vh] sm:h-[45vh] md:h-[50vh] lg:h-full">
                         <img 
                             src={allImages[selectedImage]} 
                             alt={listing.title} 
@@ -271,11 +271,11 @@ export default function ListingDetailModal({ show, listing, onClose, onPremiumCl
                         </div>
                     </div>
 
-                    {/* Content Section - Takes 2/5 of space */}
-                    <div className="lg:col-span-2 bg-white flex flex-col">
+                    {/* Content Section - Takes 2/5 of space on large screens, full width on mobile */}
+                    <div className="lg:col-span-2 bg-white flex flex-col h-[55vh] sm:h-[45vh] md:h-[40vh] lg:h-full">
                         
                         {/* Header */}
-                        <div className="p-3 border-b border-gray-100">
+                        <div className="p-3 border-b border-gray-100 flex-shrink-0">
                             <h1 className="text-base font-bold text-gray-900 mb-1">{listing.title}</h1>
                             <div className="flex items-center text-gray-600 mb-2">
                                 <svg className="w-3 h-3 text-indigo-600 mr-1" fill="currentColor" viewBox="0 0 20 20">
@@ -302,7 +302,7 @@ export default function ListingDetailModal({ show, listing, onClose, onPremiumCl
                         </div>
 
                         {/* Scrollable Content */}
-                        <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                        <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
                             
                             {/* Description */}
                             <div>
@@ -356,7 +356,7 @@ export default function ListingDetailModal({ show, listing, onClose, onPremiumCl
                         </div>
 
                         {/* Footer Actions */}
-                        <div className="p-3 bg-gray-50 border-t border-gray-200 space-y-2">
+                        <div className="p-3 bg-gray-50 border-t border-gray-200 space-y-2 flex-shrink-0">
                             <button 
                                 onClick={onPremiumClick}
                                 className="w-full bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 text-white font-medium py-2 px-3 rounded text-xs flex items-center justify-center space-x-1"

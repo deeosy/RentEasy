@@ -170,6 +170,9 @@
 
 // module.exports = {signUp, signIn, signOut, authCheck, requestPasswordReset, confirmPasswordReset}
 
+
+
+
 const UserModel = require('../models/UserModel')
 const bcrypt = require("bcryptjs")
 const jwt = require('jsonwebtoken')

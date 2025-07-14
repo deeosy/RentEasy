@@ -14,12 +14,19 @@ export default function LoginPage({ checkAuth }) {
 
     const onSubmit = async (data) => {
         try {
-            await login(data.email, data.password);
-            await checkAuth();
-            toast.success('Login successful');
-            navigate("/properties");
+            const result = await login(data.email, data.password);
+            
+            if(result.success) {
+                await checkAuth()
+                toast.success('Login successful');
+                navigate("/properties");
+            } else {
+                toast.error(`Login failed: ${result.message}. Please check your credentials`);
+                navigate("/access?mode=login")
+            } 
         } catch (error) {
             toast.error(`Login failed: ${error.message}. Please check your credentials`);
+            navigate("/access?mode=login")
         } finally {
             reset();
         }

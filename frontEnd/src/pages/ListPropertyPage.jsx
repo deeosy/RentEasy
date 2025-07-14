@@ -231,14 +231,99 @@
 // }
 
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { Plus, X, Camera, MapPin, Upload } from 'lucide-react';
 import usePropertyStore from '../store/usePropertyStore';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Fix for default Leaflet marker icons
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
+
+// Map component using plain Leaflet
+function MapComponent({ center, hasValidCoords }) {
+  const mapRef = useRef(null);
+  const markerRef = useRef(null);
+
+  useEffect(() => {
+    if (!mapRef.current) {
+      mapRef.current = L.map('map', {
+        center: center,
+        zoom: 13,
+      });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      }).addTo(mapRef.current);
+    }
+
+    if (hasValidCoords) {
+      if (markerRef.current) {
+        markerRef.current.setLatLng(center);
+      } else {
+        markerRef.current = L.marker(center)
+          .addTo(mapRef.current)
+          .bindPopup(`Location: Lat ${center[0].toFixed(4)}, Lon ${center[1].toFixed(4)}`);
+      }
+      mapRef.current.setView(center, 13);
+    }
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+        markerRef.current = null;
+      }
+    };
+  }, [center, hasValidCoords]);
+
+  return <div id="map" className="rounded-xl z-0" style={{ height: '500px', width: '100%' }} />;
+}
+
+// Image Preview Component
+function ImagePreview({ file, onRemove, index }) {
+  const [preview, setPreview] = useState(null);
+
+  useEffect(() => {
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => setPreview(e.target.result);
+      reader.readAsDataURL(file);
+    }
+    return () => setPreview(null);
+  }, [file]);
+
+  if (!preview) return null;
+
+  return (
+    <div className="relative group h-28 w-28 rounded-2xl overflow-hidden bg-gray-200">
+      <img 
+        src={preview} 
+        alt={`Preview ${index + 1}`}
+        className="w-full h-full object-cover"
+      />
+      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
+        <button
+          type="button"
+          onClick={onRemove}
+          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+        >
+          <X size={16} />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function ListPropertyPage() {
-  const { register, handleSubmit, setValue, formState: { errors, isValid } } = useForm({
+  const { register, handleSubmit, setValue, watch, formState: { errors, isValid } } = useForm({
     mode: 'onChange',
     defaultValues: {
       title: '',
@@ -252,54 +337,208 @@ export default function ListPropertyPage() {
       longitude: '',
     },
   });
+  
   const [images, setImages] = useState([]);
   const [useAutoLocation, setUseAutoLocation] = useState(false);
   const [autoLocation, setAutoLocation] = useState({ latitude: '', longitude: '' });
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
   const navigate = useNavigate();
   const { addProperty } = usePropertyStore();
+  const fileInputRef = useRef(null);
 
-  // Fetch user location when switching to auto
+  // Watch form values for latitude and longitude
+  const latitude = watch('latitude');
+  const longitude = watch('longitude');
+
+  // Default map center (Accra, Ghana)
+  const defaultCenter = [5.6037, -0.1870];
+
+  // Determine current coordinates
+  const currentLat = useAutoLocation ? parseFloat(autoLocation.latitude || '') : parseFloat(latitude || '');
+  const currentLon = useAutoLocation ? parseFloat(autoLocation.longitude || '') : parseFloat(longitude || '');
+  const mapCenter = [
+    isNaN(currentLat) || !currentLat ? defaultCenter[0] : currentLat,
+    isNaN(currentLon) || !currentLon ? defaultCenter[1] : currentLon,
+  ];
+  const hasValidCoords = !isNaN(currentLat) && !isNaN(currentLon) && currentLat && currentLon;
+
+  // Enhanced geolocation effect with better options and loading state
   useEffect(() => {
     if (useAutoLocation && navigator.geolocation) {
+      setIsLoadingLocation(true);
+      
+      const options = {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000
+      };
+
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
           setAutoLocation({ latitude, longitude });
           setValue('latitude', latitude.toString());
           setValue('longitude', longitude.toString());
+          setIsLoadingLocation(false);
           toast.info('Location fetched successfully');
         },
         (error) => {
+          setIsLoadingLocation(false);
           console.error('Geolocation error:', error);
-          toast.error('Failed to fetch location. Please enable location services or enter manually.');
-          setUseAutoLocation(false); // Revert to manual if geolocation fails
-        }
+          
+          let errorMessage = 'Failed to fetch location. ';
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage += 'Location access denied. Please enable location services.';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage += 'Location information unavailable.';
+              break;
+            case error.TIMEOUT:
+              errorMessage += 'Location request timed out.';
+              break;
+            default:
+              errorMessage += 'Unknown error occurred.';
+          }
+          
+          toast.error(errorMessage + ' Please enter coordinates manually.');
+          setUseAutoLocation(false);
+        },
+        options
       );
+    } else if (useAutoLocation && !navigator.geolocation) {
+      toast.error('Geolocation is not supported by this browser. Please enter coordinates manually.');
+      setUseAutoLocation(false);
     }
   }, [useAutoLocation, setValue]);
 
-  const handleImageChange = (e) => {
-    const files = Array.from(e.target.files).slice(0, 5); // Limit to 5 images
-    setImages(files);
-    setValue('images', files); // Update form value for images
+  // Image handling functions
+  const handleImageUpload = (files) => {
+    const fileArray = Array.from(files);
+    const validFiles = fileArray.filter(file => {
+      const isValidType = file.type.startsWith('image/');
+      const isValidSize = file.size <= 5 * 1024 * 1024; // 5MB limit
+      
+      if (!isValidType) {
+        toast.error(`${file.name} is not a valid image file`);
+        return false;
+      }
+      if (!isValidSize) {
+        toast.error(`${file.name} is too large. Maximum size is 5MB`);
+        return false;
+      }
+      return true;
+    });
+
+    const totalImages = images.length + validFiles.length;
+    if (totalImages > 5) {
+      toast.warning('Maximum 5 images allowed. Some files were not added.');
+      const remainingSlots = 5 - images.length;
+      const filesToAdd = validFiles.slice(0, remainingSlots);
+      setImages(prev => [...prev, ...filesToAdd]);
+    } else {
+      setImages(prev => [...prev, ...validFiles]);
+    }
+  };
+
+  const handlePlusButtonClick = () => {
+    if (images.length >= 5) {
+      toast.warning('Maximum 5 images allowed');
+      return;
+    }
+    fileInputRef.current?.click();
+  };
+
+  const handleFileInputChange = (e) => {
+    if (e.target.files?.length > 0) {
+      handleImageUpload(e.target.files);
+    }
+    // Reset the input value to allow selecting the same file again
+    e.target.value = '';
+  };
+
+  const removeImage = (indexToRemove) => {
+    setImages(prev => prev.filter((_, index) => index !== indexToRemove));
+  };
+
+  // Drag and drop handlers
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    if (e.dataTransfer.files?.length > 0) {
+      handleImageUpload(e.dataTransfer.files);
+    }
+  };
+
+  // Enhanced location status display
+  const renderLocationStatus = () => {
+    if (useAutoLocation) {
+      if (isLoadingLocation) {
+        return (
+          <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
+            <span>Fetching location...</span>
+          </div>
+        );
+      } else if (autoLocation.latitude && autoLocation.longitude) {
+        return (
+          <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
+            <MapPin size={14} />
+            Location detected: Lat {parseFloat(autoLocation.latitude).toFixed(4)}, 
+            Lon {parseFloat(autoLocation.longitude).toFixed(4)}
+          </p>
+        );
+      } else {
+        return (
+          <p className="text-sm text-yellow-600 mt-1">
+            ⚠ Location not yet available
+          </p>
+        );
+      }
+    }
+    return null;
   };
 
   const toggleLocationMode = () => {
+    if (isLoadingLocation) return;
+    
     setUseAutoLocation((prev) => !prev);
     if (!useAutoLocation) {
-      // Clear manual inputs when switching to auto
       setValue('latitude', '');
       setValue('longitude', '');
     } else {
-      // Clear auto location when switching to manual
       setAutoLocation({ latitude: '', longitude: '' });
     }
   };
 
   const onSubmit = async (data) => {
-    // Validate location
     if (!data.ghanaPostAddress && (!data.latitude || !data.longitude)) {
       toast.error('Either Ghana Post Address or GPS coordinates are required.');
+      return;
+    }
+
+    if (images.length === 0) {
+      toast.error('At least one image is required.');
       return;
     }
 
@@ -315,13 +554,6 @@ export default function ListPropertyPage() {
     formDataToSend.append('location[gps][longitude]', useAutoLocation ? autoLocation.longitude : data.longitude);
     images.forEach((image) => formDataToSend.append('images', image));
 
-    // Log FormData for debugging
-    const formDataLog = {};
-    formDataToSend.forEach((value, key) => {
-      formDataLog[key] = value;
-    });
-    console.log('FormData sent:', formDataLog);
-
     try {
       const response = await addProperty(formDataToSend);
       if (response.paymentUrl) {
@@ -336,212 +568,290 @@ export default function ListPropertyPage() {
   };
 
   return (
-    <div className="container mx-auto p-4 max-w-2xl">
+    <div className="container mx-auto p-4 max-w-7xl">
       <h1 className="text-3xl font-bold text-center text-indigo-900 mb-8">List a Property</h1>
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6 text-indigo-900">
-        <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Title *</label>
-          <input
-            type="text"
-            {...register('title', { required: 'Title is required' })}
-            className="rounded-xl bg-gray-300 px-4 py-3 placeholder-indigo-900 focus:outline-none"
-            placeholder="e.g., Cozy 2-Bedroom Apartment"
-          />
-          {errors.title && (
-            <span className="text-red-500 text-sm mt-1">{errors.title.message}</span>
-          )}
-        </div>
-
-        <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Description *</label>
-          <textarea
-            {...register('description', { required: 'Description is required' })}
-            className="rounded-xl bg-gray-300 px-4 py-3 placeholder-indigo-900 focus:outline-none h-32 resize-none"
-            placeholder="Describe your property..."
-          />
-          {errors.description && (
-            <span className="text-red-500 text-sm mt-1">{errors.description.message}</span>
-          )}
-        </div>
-
-        <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Price (GHS) *</label>
-          <input
-            type="number"
-            {...register('price', {
-              required: 'Price is required',
-              min: { value: 0, message: 'Price must be a positive number' },
-            })}
-            className="rounded-xl bg-gray-300 px-4 py-3 placeholder-indigo-900 focus:outline-none"
-            placeholder="e.g., 1500"
-          />
-          {errors.price && (
-            <span className="text-red-500 text-sm mt-1">{errors.price.message}</span>
-          )}
-        </div>
-
-        <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Property Type *</label>
-          <select
-            {...register('type', { required: 'Property type is required' })}
-            className="rounded-xl bg-gray-300 px-4 py-3 placeholder-indigo-900 focus:outline-none"
-          >
-            <option value="">Select Type</option>
-            <option value="apartment">Apartment</option>
-            <option value="house">House</option>
-            <option value="condo">Condo</option>
-          </select>
-          {errors.type && (
-            <span className="text-red-500 text-sm mt-1">{errors.type.message}</span>
-          )}
-        </div>
-
-        <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Beds *</label>
-          <input
-            type="number"
-            {...register('beds', {
-              required: 'Number of beds is required',
-              min: { value: 1, message: 'Beds must be at least 1' },
-            })}
-            className="rounded-xl bg-gray-300 px-4 py-3 placeholder-indigo-900 focus:outline-none"
-            placeholder="e.g., 2"
-          />
-          {errors.beds && (
-            <span className="text-red-500 text-sm mt-1">{errors.beds.message}</span>
-          )}
-        </div>
-
-        <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Baths *</label>
-          <input
-            type="number"
-            {...register('baths', {
-              required: 'Number of baths is required',
-              min: { value: 1, message: 'Baths must be at least 1' },
-            })}
-            className="rounded-xl bg-gray-300 px-4 py-3 placeholder-indigo-900 focus:outline-none"
-            placeholder="e.g., 1"
-          />
-          {errors.baths && (
-            <span className="text-red-500 text-sm mt-1">{errors.baths.message}</span>
-          )}
-        </div>
-
-        <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Ghana Post Address</label>
-          <input
-            type="text"
-            {...register('ghanaPostAddress', {
-              pattern: {
-                value: /^[A-Z]{2}-\d{3}-\d{4}$/,
-                message: 'Invalid Ghana Post Address (e.g., GA-123-4567)',
-              },
-            })}
-            className="rounded-xl bg-gray-300 px-4 py-3 placeholder-indigo-900 focus:outline-none"
-            placeholder="e.g., GA-123-4567"
-          />
-          {errors.ghanaPostAddress && (
-            <span className="text-red-500 text-sm mt-1">{errors.ghanaPostAddress.message}</span>
-          )}
-        </div>
-
-        <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Location Input Method</label>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={toggleLocationMode}
-              className={`flex-1 py-2 rounded-xl font-medium transition-colors duration-150 ${
-                useAutoLocation
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-300 text-indigo-900 hover:bg-gray-400'
-              }`}
-            >
-              Auto
-            </button>
-            <button
-              type="button"
-              onClick={toggleLocationMode}
-              className={`flex-1 py-2 rounded-xl font-medium transition-colors duration-150 ${
-                !useAutoLocation
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-300 text-indigo-900 hover:bg-gray-400'
-              }`}
-            >
-              Manual
-            </button>
+      <div className="flex flex-col-reverse md:flex-row gap-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6 text-indigo-900 md:w-[50%]">
+          <div className="flex flex-col">
+            <label className="text-sm font-medium mb-1">Title *</label>
+            <input
+              type="text"
+              {...register('title', { required: 'Title is required' })}
+              className="rounded-xl bg-gray-300 px-4 py-3 placeholder-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+              placeholder="e.g., Cozy 2-Bedroom Apartment"
+            />
+            {errors.title && (
+              <span className="text-red-500 text-sm mt-1">{errors.title.message}</span>
+            )}
           </div>
-          {useAutoLocation && (
-            <p className="text-sm text-gray-600 mt-1">
-              {autoLocation.latitude && autoLocation.longitude
-                ? `Detected: Lat ${autoLocation.latitude}, Lon ${autoLocation.longitude}`
-                : 'Fetching location...'}
-            </p>
-          )}
-        </div>
 
-        {!useAutoLocation && (
-          <>
-            <div className="flex flex-col">
-              <label className="text-sm font-medium mb-1">Latitude (optional)</label>
-              <input
-                type="number"
-                {...register('latitude', {
-                  validate: (value) =>
-                    !value || (value >= -90 && value <= 90) || 'Latitude must be between -90 and 90',
-                })}
-                className="rounded-xl bg-gray-300 px-4 py-3 placeholder-indigo-900 focus:outline-none"
-                step="any"
-                placeholder="e.g., 5.6037"
-              />
-              {errors.latitude && (
-                <span className="text-red-500 text-sm mt-1">{errors.latitude.message}</span>
+          <div className="flex flex-col">
+            <label className="text-sm font-medium mb-1">Description *</label>
+            <textarea
+              {...register('description', { required: 'Description is required', minLength: { value: 20, message: 'Description must be at least 20 characters' } })}
+              className="rounded-xl bg-gray-300 px-4 py-3 placeholder-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all h-32 resize-none"
+              placeholder="Describe your property in detail..."
+            />
+            {errors.description && (
+              <span className="text-red-500 text-sm mt-1">{errors.description.message}</span>
+            )}
+          </div>
+
+          <div className="flex flex-col">
+            <label className="text-sm font-medium mb-1">Price (GHS) *</label>
+            <input
+              type="number"
+              {...register('price', {
+                required: 'Price is required',
+                min: { value: 1, message: 'Price must be greater than 0' },
+                max: { value: 10000000, message: 'Price seems too high' }
+              })}
+              className="rounded-xl bg-gray-300 px-4 py-3 placeholder-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+              placeholder="e.g., 1500"
+            />
+            {errors.price && (
+              <span className="text-red-500 text-sm mt-1">{errors.price.message}</span>
+            )}
+          </div>
+
+          <div className="flex gap-3">
+            <div className="flex flex-col md:max-w-72 ">
+              <label className="text-sm font-medium mb-1">Property Type *</label>
+              <select
+                {...register('type', { required: 'Property type is required' })}
+                className="rounded-xl bg-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+              >
+                <option value="">Select Type</option>
+                <option value="apartment">Apartment</option>
+                <option value="house">House</option>
+                <option value="condo">Condo</option>
+                <option value="studio">Studio</option>
+                <option value="townhouse">Townhouse</option>
+              </select>
+              {errors.type && (
+                <span className="text-red-500 text-sm mt-1">{errors.type.message}</span>
               )}
             </div>
+
             <div className="flex flex-col">
-              <label className="text-sm font-medium mb-1">Longitude (optional)</label>
+              <label className="text-sm font-medium mb-1">Beds *</label>
               <input
                 type="number"
-                {...register('longitude', {
-                  validate: (value) =>
-                    !value || (value >= -180 && value <= 180) || 'Longitude must be between -180 and 180',
+                {...register('beds', {
+                  required: 'Number of beds is required',
+                  min: { value: 1, message: 'Beds must be at least 1' },
+                  max: { value: 20, message: 'Maximum 20 beds allowed' }
                 })}
-                className="rounded-xl bg-gray-300 px-4 py-3 placeholder-indigo-900 focus:outline-none"
-                step="any"
-                placeholder="e.g., -0.1870"
+                className="w-full rounded-xl bg-gray-300 px-4 py-3 placeholder-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                placeholder="e.g., 2"
               />
-              {errors.longitude && (
-                <span className="text-red-500 text-sm mt-1">{errors.longitude.message}</span>
+              {errors.beds && (
+                <span className="text-red-500 text-sm mt-1">{errors.beds.message}</span>
               )}
             </div>
-          </>
-        )}
 
-        <div className="flex flex-col">
-          <label className="text-sm font-medium Remedialmb-1">Images (up to 5)</label>
-          <input
-            type="file"
-            multiple
-            accept="image/*"
-            onChange={handleImageChange}
-            className="border p-2 w-full text-gray-700"
-          />
-          {images.length > 5 && (
-            <span className="text-red-500 text-sm mt-1">Maximum 5 images allowed</span>
-          )}
+            <div className="flex flex-col">
+              <label className="text-sm font-medium mb-1">Baths *</label>
+              <input
+                type="number"
+                {...register('baths', {
+                  required: 'Number of baths is required',
+                  min: { value: 1, message: 'Baths must be at least 1' },
+                  max: { value: 20, message: 'Maximum 20 baths allowed' }
+                })}
+                className="w-full rounded-xl bg-gray-300 px-4 py-3 placeholder-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                placeholder="e.g., 1"
+              />
+              {errors.baths && (
+                <span className="text-red-500 text-sm mt-1">{errors.baths.message}</span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex space-x-5">
+            <div className="flex flex-col">
+              <label className="text-sm font-medium mb-1">Ghana Post Address</label>
+              <input
+                type="text"
+                {...register('ghanaPostAddress', {
+                  pattern: {
+                    value: /^[A-Z]{2}-\d{3}-\d{4}$/,
+                    message: 'Invalid Ghana Post Address (e.g., GA-123-4567)',
+                  },
+                })}
+                className="w-40 rounded-xl bg-gray-300 px-4 py-3 placeholder-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                placeholder="e.g., GA-123-4567"
+              />
+              {errors.ghanaPostAddress && (
+                <span className="text-red-500 text-sm mt-1">{errors.ghanaPostAddress.message}</span>
+              )}
+            </div>
+            
+            <div className="flex flex-col">
+              <div className="flex flex-col">
+                <label className="text-sm font-medium mb-1">Location Input Method:</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={toggleLocationMode}
+                    disabled={isLoadingLocation}
+                    className={`flex-1 py-1 px-2 rounded-xl font-medium transition-all duration-150 ${
+                      useAutoLocation
+                        ? 'bg-indigo-600 text-white shadow-md'
+                        : 'bg-gray-300 text-indigo-900 hover:bg-gray-400'
+                    } ${isLoadingLocation ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    {isLoadingLocation && useAutoLocation ? 'Loading...' : 'Auto'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={toggleLocationMode}
+                    disabled={isLoadingLocation}
+                    className={`flex-1 py-1 px-2 rounded-xl font-medium transition-all duration-150 ${
+                      !useAutoLocation
+                        ? 'bg-indigo-600 text-white shadow-md'
+                        : 'bg-gray-300 text-indigo-900 hover:bg-gray-400'
+                    } ${isLoadingLocation ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    Manual
+                  </button>
+                </div>
+              </div>
+              
+              {renderLocationStatus()}
+
+              {!useAutoLocation && (
+                <div className="flex gap-1.5 mt-2">
+                  <div className="flex flex-col">
+                    <label className="text-sm font-medium mb-1">Latitude (optional)</label>
+                    <input
+                      type="number"
+                      {...register('latitude', {
+                        validate: (value) =>
+                          !value || (value >= -90 && value <= 90) || 'Latitude must be between -90 and 90',
+                      })}
+                      className="w-36 rounded-xl bg-gray-300 px-4 py-1 placeholder-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                      step="any"
+                      placeholder="e.g., 5.6037"
+                    />
+                    {errors.latitude && (
+                      <span className="text-red-500 text-sm mt-1">{errors.latitude.message}</span>
+                    )}
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="text-sm font-medium mb-1">Longitude (optional)</label>
+                    <input
+                      type="number"
+                      {...register('longitude', {
+                        validate: (value) =>
+                          !value || (value >= -180 && value <= 180) || 'Longitude must be between -180 and 180',
+                      })}
+                      className="w-36 rounded-xl bg-gray-300 px-4 py-1 placeholder-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                      step="any"
+                      placeholder="e.g., -0.1870"
+                    />
+                    {errors.longitude && (
+                      <span className="text-red-500 text-sm mt-1">{errors.longitude.message}</span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={!isValid || images.length === 0}
+            className={`bg-indigo-600 text-white px-6 py-3 rounded-xl font-medium w-fit mx-auto transition-all duration-150 ${
+              !isValid || images.length === 0 
+                ? 'opacity-50 cursor-not-allowed' 
+                : 'hover:bg-indigo-700 hover:shadow-lg transform hover:scale-105'
+            }`}
+          >
+            {images.length <= 2 ? 'Add images to continue' : 'Submit Property'}
+          </button>
+        </form>
+        
+        <div className="flex flex-col md:w-1/2">
+          {/* Enhanced Images container with drag and drop */}
+          <div className="flex flex-col mb-4">
+            <label className="text-sm font-medium mb-2 text-indigo-900 flex items-center gap-2">
+              <Camera size={16} />
+              Property Images * (min 3, max 5)
+            </label>
+            <div 
+              className={`flex gap-2 p-3 rounded-xl border-2 border-dashed transition-all ${
+                dragActive 
+                  ? 'border-indigo-500 bg-indigo-50' 
+                  : 'border-gray-300 hover:border-gray-400'
+              }`}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+            >
+              {/* Plus button for adding images */}
+              <button
+                type="button"
+                onClick={handlePlusButtonClick}
+                className={`h-28 w-28 bg-gray-300 rounded-2xl flex flex-col items-center justify-center text-indigo-900 transition-all duration-200 ${
+                  images.length >= 5 
+                    ? 'opacity-50 cursor-not-allowed' 
+                    : 'hover:bg-gray-400 hover:shadow-md transform hover:scale-105'
+                }`}
+                disabled={images.length >= 5}
+              >
+                <Plus size={24} />
+                <span className="text-xs mt-1">Add Image</span>
+              </button>
+
+              {/* Image previews */}
+              {images.map((image, index) => (
+                <ImagePreview 
+                  key={index} 
+                  file={image} 
+                  index={index}
+                  onRemove={() => removeImage(index)} 
+                />
+              ))}
+
+              {/* Empty placeholders */}
+              {Array.from({ length: Math.max(0, 5 - images.length) }).map((_, index) => (
+                <div 
+                  key={`placeholder-${index}`} 
+                  className="h-28 w-28 bg-gray-200 rounded-2xl border-2 border-dashed border-gray-300"
+                />
+              ))}
+            </div>
+            
+            {/* Image upload info */}
+            <div className="mt-2 text-sm text-gray-600">
+              <p className="flex items-center gap-1">
+                <Upload size={14} />
+                {images.length}/5 images uploaded
+              </p>
+              <p className="text-xs mt-1">
+                Drag & drop images here or click the + button. Max 5MB per image.
+              </p>
+            </div>
+            
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleFileInputChange}
+              className="hidden"
+            />
+          </div>
+
+          {/* Map container */}
+          <div className="h-[400px] rounded-xl overflow-hidden shadow-lg">
+            <MapComponent center={mapCenter} hasValidCoords={hasValidCoords} />
+          </div>
         </div>
-
-        <button
-          type="submit"
-          disabled={!isValid || images.length > 5}
-          className={`bg-indigo-600 text-white px-6 py-3 rounded-xl font-medium w-fit mx-auto cursor-pointer transition-colors duration-150 ${
-            !isValid || images.length > 5 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-indigo-700'
-          }`}
-        >
-          Submit Property
-        </button>
-      </form>
+      </div>
     </div>
   );
 }

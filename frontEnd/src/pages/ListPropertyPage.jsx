@@ -316,7 +316,7 @@ function ImagePreview({ file, onRemove, index }) {
   if (!preview) return null;
 
   return (
-    <div className="example relative group h-28 min-w-28 rounded-2xl overflow-hidden bg-gray-200">
+    <div className="relative group h-28 min-w-28 rounded-2xl overflow-hidden bg-gray-200">
       <img 
         src={preview} 
         alt={`Preview ${index + 1}`}
@@ -516,7 +516,7 @@ export default function ListPropertyPage() {
       } else if (autoLocation.latitude && autoLocation.longitude) {
         return (
           <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
-            <MapPin size={14} />
+            <MapPin size={10} />
             Location detected: Lat {parseFloat(autoLocation.latitude).toFixed(4)}, 
             Lon {parseFloat(autoLocation.longitude).toFixed(4)}
           </p>
@@ -583,7 +583,7 @@ export default function ListPropertyPage() {
   return (
     <div className="container mx-auto p-4 max-w-7xl">
       <h1 className="text-3xl font-bold text-center text-indigo-900 mb-8">List a Property</h1>
-      <div className="flex flex-col-reverse md:flex-row gap-6">
+      <div className="flex flex-col-reverse md:flex-row gap-4">
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6 text-indigo-900 md:w-[50%]">
           <div className="flex flex-col">
             <label className="text-sm font-medium mb-1">Title *</label>
@@ -785,7 +785,7 @@ export default function ListPropertyPage() {
           </button>
         </form>
         
-        <div className="flex flex-col md:w-1/2">
+        <div className="flex flex-col px-2 md:w-1/2">
           {/* Enhanced Images container with drag and drop */}
           <div className="flex flex-col mb-4">
             <label className="text-sm font-medium mb-2 text-indigo-900 flex items-center gap-2">
@@ -807,7 +807,7 @@ export default function ListPropertyPage() {
               <button
                 type="button"
                 onClick={handlePlusButtonClick}
-                className={`min-h-28 min-w-28 bg-gray-300 rounded-2xl flex flex-col items-center justify-center text-indigo-900 transition-all duration-200 ${
+                className={`h-28 min-w-28 bg-gray-300 rounded-2xl flex flex-col items-center justify-center text-indigo-900 transition-all duration-200 ${
                   images.length >= 5 
                     ? 'opacity-50 cursor-not-allowed' 
                     : 'hover:bg-gray-400 hover:shadow-md transform hover:scale-105'
@@ -819,19 +819,20 @@ export default function ListPropertyPage() {
               </button>
 
               {/* Image previews */}
-              <div className="flex gap-2 overflow-x-scroll min-w-28 example">
-                {images.map((image, index) => (
-                  <ImagePreview 
-                    key={index} 
-                    file={image} 
-                    index={index}
-                    onRemove={() => removeImage(index)} 
-                  />
-                ))}
+              <div className=" flex gap-2 overflow-x-scroll no-scroll ">
+              {images.map((image, index) => (
+                <ImagePreview 
+                  key={index} 
+                  file={image} 
+                  index={index}
+                  onRemove={() => removeImage(index)} 
+                />
+              ))}
+
               </div>
 
               {/* Empty placeholders */}
-              {Array.from({ length: Math.max(0, 5 - images.length) }).map((_, index) => (
+              {Array.from({ length: Math.max(0, 1 - images.length) }).map((_, index) => (
                 <div 
                   key={`placeholder-${index}`} 
                   className="h-28 min-w-28 bg-gray-200 rounded-2xl border-2 border-dashed border-gray-300"

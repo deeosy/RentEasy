@@ -290,26 +290,39 @@ function MapComponent({ center, hasValidCoords }) {
 // Image Preview Component
 function ImagePreview({ file, onRemove, index }) {
   const [preview, setPreview] = useState(null);
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     if (file) {
+      setIsLoading(true);
       const reader = new FileReader();
-      reader.onload = (e) => setPreview(e.target.result);
+      reader.onload = (e) => {
+        console.log('FileReader result: ', e.target.result);
+        setPreview(e.target.result);
+        setIsLoading(false);
+      }
       reader.readAsDataURL(file);
     }
-    return () => setPreview(null);
+    return () => {
+      setPreview(null);
+      setIsLoading(false)
+    }
   }, [file]);
+
+  if (isLoading) {
+    return <div>Loading...</div>
+  }
 
   if (!preview) return null;
 
   return (
-    <div className="relative group h-28 w-28 rounded-2xl overflow-hidden bg-gray-200">
+    <div className="example relative group h-28 min-w-28 rounded-2xl overflow-hidden bg-gray-200">
       <img 
         src={preview} 
         alt={`Preview ${index + 1}`}
         className="w-full h-full object-cover"
       />
-      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/10 group-hover:bg-black/40 transition-all duration-200 flex items-center justify-center">
         <button
           type="button"
           onClick={onRemove}
@@ -537,8 +550,8 @@ export default function ListPropertyPage() {
       return;
     }
 
-    if (images.length === 0) {
-      toast.error('At least one image is required.');
+    if (images.length <= 3) {
+      toast.error('Minimum of three (3) images are required.');
       return;
     }
 
@@ -761,9 +774,9 @@ export default function ListPropertyPage() {
 
           <button
             type="submit"
-            disabled={!isValid || images.length === 0}
+            disabled={!isValid || images.length <= 2}
             className={`bg-indigo-600 text-white px-6 py-3 rounded-xl font-medium w-fit mx-auto transition-all duration-150 ${
-              !isValid || images.length === 0 
+              !isValid || images.length <= 2 
                 ? 'opacity-50 cursor-not-allowed' 
                 : 'hover:bg-indigo-700 hover:shadow-lg transform hover:scale-105'
             }`}
@@ -794,7 +807,7 @@ export default function ListPropertyPage() {
               <button
                 type="button"
                 onClick={handlePlusButtonClick}
-                className={`h-28 w-28 bg-gray-300 rounded-2xl flex flex-col items-center justify-center text-indigo-900 transition-all duration-200 ${
+                className={`min-h-28 min-w-28 bg-gray-300 rounded-2xl flex flex-col items-center justify-center text-indigo-900 transition-all duration-200 ${
                   images.length >= 5 
                     ? 'opacity-50 cursor-not-allowed' 
                     : 'hover:bg-gray-400 hover:shadow-md transform hover:scale-105'
@@ -806,26 +819,28 @@ export default function ListPropertyPage() {
               </button>
 
               {/* Image previews */}
-              {images.map((image, index) => (
-                <ImagePreview 
-                  key={index} 
-                  file={image} 
-                  index={index}
-                  onRemove={() => removeImage(index)} 
-                />
-              ))}
+              <div className="flex gap-2 overflow-x-scroll min-w-28 example">
+                {images.map((image, index) => (
+                  <ImagePreview 
+                    key={index} 
+                    file={image} 
+                    index={index}
+                    onRemove={() => removeImage(index)} 
+                  />
+                ))}
+              </div>
 
               {/* Empty placeholders */}
               {Array.from({ length: Math.max(0, 5 - images.length) }).map((_, index) => (
                 <div 
                   key={`placeholder-${index}`} 
-                  className="h-28 w-28 bg-gray-200 rounded-2xl border-2 border-dashed border-gray-300"
+                  className="h-28 min-w-28 bg-gray-200 rounded-2xl border-2 border-dashed border-gray-300"
                 />
               ))}
             </div>
             
             {/* Image upload info */}
-            <div className="mt-2 text-sm text-gray-600">
+            <div className="flex justify-between mt-2 text-sm text-gray-600">
               <p className="flex items-center gap-1">
                 <Upload size={14} />
                 {images.length}/5 images uploaded

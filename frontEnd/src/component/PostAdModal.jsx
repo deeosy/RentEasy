@@ -116,7 +116,7 @@ export function PostAdModal() {
           callback: async (transaction) => {
             try {
               await axios.post(
-                'http://localhost:4001/api/properties/confirm-payment',
+                'https://renteasy-m3ux.onrender.com/api/properties/confirm-payment',
                 {
                   reference: transaction.reference,
                   propertyData: response.propertyData,

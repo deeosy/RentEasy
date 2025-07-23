@@ -22,7 +22,7 @@ const SettingPage = () => {
   useEffect(() => {
     const fetchToken = async () => {
       try {
-        const response = await axios.get('http://localhost:4001/api/users', { withCredentials: true });
+        const response = await axios.get('https://renteasy-m3ux.onrender.com/api/users', { withCredentials: true });
         if (response.status === 200) {
           const { firebaseToken, token } = response.data;
           setAuthToken(token); // Set the token from response.data.token
@@ -70,7 +70,7 @@ const SettingPage = () => {
       }
 
       // Update profile including the new or existing profile image
-      const response = await fetch('http://localhost:4001/api/users/profile', {
+      const response = await fetch('https://renteasy-m3ux.onrender.com/api/users/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

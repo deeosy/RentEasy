@@ -14,7 +14,7 @@ export default function PropertyDetailsPage() {
         const fetchProperty = async () => {
             try {
                 setLoading(true);
-                const response = await axios.get(`http://localhost:4001/api/properties/${id}`);
+                const response = await axios.get(`https://renteasy-m3ux.onrender.com/api/properties/${id}`);
                 setProperty(response.data.property);
             } catch (err) {
                 toast.error(`Failed to load property: ${err.response?.data?.message || err.message}`, {

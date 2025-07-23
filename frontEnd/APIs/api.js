@@ -1,7 +1,7 @@
 // import axios from "axios";
 
 // const api = axios.create({
-//     baseURL: "http://localhost:4001/api",
+//     baseURL: "https://renteasy-m3ux.onrender.com/api",
 //     headers: {"Content-Type": "application/json"},
 //     withCredentials: true, // ensures cookie are sent with requests to the backend
 // })
@@ -52,7 +52,7 @@ import { auth } from '../src/firebase';
 export const SignUpUser = async (username, email, phone, password, firstName, lastName) => {
   try {
     const response = await axios.post(
-      'http://localhost:4001/api/users/signup',
+      'https://renteasy-m3ux.onrender.com/api/users/signup',
       { username, email, phone, password, firstName, lastName },
       { withCredentials: true }
     );
@@ -67,7 +67,7 @@ export const SignUpUser = async (username, email, phone, password, firstName, la
 export const LoginUser = async (email, password) => {
   try {
     const response = await axios.post(
-      'http://localhost:4001/api/users/signin',
+      'https://renteasy-m3ux.onrender.com/api/users/signin',
       { email, password },
       { withCredentials: true }
     );
@@ -82,7 +82,7 @@ export const LoginUser = async (email, password) => {
 export const SignOutUser = async () => {
   try {
     const response = await axios.post(
-      'http://localhost:4001/api/users/signout',
+      'https://renteasy-m3ux.onrender.com/api/users/signout',
       {},
       { withCredentials: true }
     );

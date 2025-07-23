@@ -11,7 +11,7 @@
 //     useEffect(() => {
 //       const fetchProperties = async () => {
 //         try {
-//             const response = await axios.get('http://localhost:4001/api/properties');
+//             const response = await axios.get('https://renteasy-m3ux.onrender.com/api/properties');
 //             setProperties(response.data.properties);
 //         } catch (err) {
 //             console.error('Error fetching properties: ', err);
@@ -71,7 +71,7 @@ export default function PropertiesPage() {
         const fetchProperties = async () => {
             try {
                 setLoading(true);
-                const response = await axios.get('http://localhost:4001/api/properties');
+                const response = await axios.get('https://renteasy-m3ux.onrender.com/api/properties');
                 setProperties(response.data.properties);
             } catch (err) {
                 console.error('Error fetching properties:', err);

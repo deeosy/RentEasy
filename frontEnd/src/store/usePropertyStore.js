@@ -11,7 +11,7 @@
 //             isAuth: false,
 //             checkAuth: async () => {
 //                 try {
-//                     const response = await axios.get('http://localhost:4001/api', { withCredentials: true } );
+//                     const response = await axios.get('https://renteasy-m3ux.onrender.com/api', { withCredentials: true } );
 //                     if (response.status === 200) {
 //                         const { user } = response.data;
 //                         set({ user, isAuth: true });
@@ -64,7 +64,7 @@
 //                     formData.append('type', propertyData.type);
 //                     files.forEach((file) => formData.append('images', file));
 
-//                     const response = await axios.post('http://localhost:4001/api/properties', formData, {
+//                     const response = await axios.post('https://renteasy-m3ux.onrender.com/api/properties', formData, {
 //                         headers: { 'Content-Type': 'multipart/form-data' },
 //                         withCredentials: true,
 //                     } );
@@ -100,7 +100,7 @@ const usePropertyStore = create(
       // Check if user is authenticated
       checkAuth: async () => {
         try {
-          const response = await axios.get('http://localhost:4001/api/users', { withCredentials: true });
+          const response = await axios.get('https://renteasy-m3ux.onrender.com/api/users', { withCredentials: true });
           if (response.status === 200) {
             const { user, firebaseToken } = response.data;
             await signInWithFirebaseToken(firebaseToken) // sign in to firebase with custom token
@@ -184,7 +184,7 @@ const usePropertyStore = create(
           // };
           // console.log('FormData sent:', formDataLog);
 
-          const response = await axios.post('http://localhost:4001/api/properties', formData, {
+          const response = await axios.post('https://renteasy-m3ux.onrender.com/api/properties', formData, {
             withCredentials: true,
           });
           return response.data;

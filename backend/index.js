@@ -50,41 +50,43 @@ const userRoutes = require('./routes/UserRoutes');
 const propertyRoutes = require('./routes/PropertyRoutes');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
-
 require('dotenv').config();
 
 const port = process.env.PORT || 4001;
 const server = express();
 
+// CORS allowed origins from .env
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : ['http://localhost:5173'];
+
+server.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+}));
+
 // Middlewares
 server.use(express.json());
 server.use(express.urlencoded({ extended: true }));
 server.use(cookieParser());
-server.use(cors({
-  origin: 'http://localhost:5173', // Front-end dev origin
-  credentials: true, // Allow cookies
-  // For deployment, uncomment and configure ALLOWED_ORIGINS in .env
-  // origin: (origin, callback) => {
-  //   const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [];
-  //   if (!origin || allowedOrigins.includes(origin)) {
-  //     callback(null, true);
-  //   } else {
-  //     callback(new Error('Not allowed by CORS'));
-  //   }
-  // },
-}));
 
 // Routes
 server.use('/api/users', userRoutes);
 server.use('/api/properties', propertyRoutes);
 
-// Global error-handling middleware
+// Global error handler
 server.use((err, req, res, next) => {
   console.error('Server error:', err);
   res.status(500).json({ message: err.message || 'Internal server error' });
 });
 
-// Mongoose connection
+// DB connection + start server
 mongoose.connect(process.env.MONGO_DB)
   .then(() => {
     server.listen(port, () => {

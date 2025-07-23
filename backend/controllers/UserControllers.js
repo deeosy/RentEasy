@@ -190,6 +190,7 @@ const transporter = nodemailer.createTransport({
 })
 
 const authCheck = async (req, res) => {
+    console.log('COokies in authCheck: ', req.cookies);  // remove later    
     const token = req.cookies.token
     if(!token) return res.status(401).json({message: "Unauthorized: No token provided"})
 
@@ -227,7 +228,7 @@ const signUp = async (req, res) => {
         const token = jwt.sign({id:savedUser._id}, process.env.JWT_SECRET_KEY, {expiresIn: "1d"})
         const firebaseToken = await admin.auth().createCustomToken(savedUser._id.toString());
 
-        res.cookie("token", token, {httpOnly:true, secure: false, maxAge: 24*60*60*1000, sameSite: "strict"})
+        res.cookie("token", token, {httpOnly:true, secure: process.env.NODE_ENV === 'production', maxAge: 24*60*60*1000, sameSite: "none"})
             .status(200).json({message: "User created successfully", token, firebaseToken,
                 user: {id: savedUser._id, username: savedUser.username, email: savedUser.email, phone: savedUser.phone, firstName: savedUser.firstName, lastName: savedUser.lastName }
             }
@@ -253,7 +254,7 @@ const signIn = async (req, res) => {
         const token = jwt.sign({id: user._id}, process.env.JWT_SECRET_KEY, {expiresIn: "1d"} )
         const firebaseToken = await admin.auth().createCustomToken(user._id.toString());
 
-        res.cookie("token", token, {httpOnly:true, secure: false, maxAge: 24*60*60*1000, sameSite: "strict" })
+        res.cookie("token", token, {httpOnly:true, secure: process.env.NODE_ENV === 'production', maxAge: 24*60*60*1000, sameSite: "none"})
         .status(200).json({message: "User signed in successfully", firebaseToken, user: {id:user._id, username: user.username, email: user.email, phone: user.phone, firstName: user.firstName, lastName: user.lastName, profileImage: user.profileImage }})
     } catch (err) {
         console.error('Sign in error:', err)

@@ -58,7 +58,7 @@ const server = express();
 // CORS allowed origins from .env
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
-  : ['http://localhost:5173'];
+  : ['http://localhost:5173', 'https://renteasy-gh.netlify.app'];
 
 server.use(cors({
   origin: (origin, callback) => {

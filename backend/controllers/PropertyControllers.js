@@ -235,7 +235,7 @@ exports.createProperty = async (req, res) => {
           email: req.user.email,
           amount: 5000, // 50 GHS in kobo
           reference: `prop_${Date.now()}_${req.user.id}`,
-          callback_url: 'http://localhost:4001/api/properties/confirm-payment',
+          callback_url: 'https://renteasy-m3ux.onrender.com/api/properties/confirm-payment',
         },
         {
           headers: {

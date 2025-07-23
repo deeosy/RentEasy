@@ -5,7 +5,8 @@
   "author": "Dee",
   "license": "MIT",
   "scripts": {
-    "start": "nodemon"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
   "dependencies": {
     "axios": "^1.10.0",

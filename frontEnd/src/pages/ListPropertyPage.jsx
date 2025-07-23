@@ -254,7 +254,11 @@ function MapComponent({ center, hasValidCoords }) {
   const markerRef = useRef(null);
 
   useEffect(() => {
+    console.log('MapComponent updating:', { center, hasValidCoords });
+
+    // Initialize map only once
     if (!mapRef.current) {
+      console.log('Initializing map with center:', center);
       mapRef.current = L.map('map', {
         center: center,
         zoom: 13,
@@ -264,7 +268,9 @@ function MapComponent({ center, hasValidCoords }) {
       }).addTo(mapRef.current);
     }
 
+    // Update map center and marker when coordinates change
     if (hasValidCoords) {
+      console.log('Updating marker and view to:', center);
       if (markerRef.current) {
         markerRef.current.setLatLng(center);
       } else {
@@ -273,10 +279,15 @@ function MapComponent({ center, hasValidCoords }) {
           .bindPopup(`Location: Lat ${center[0].toFixed(4)}, Lon ${center[1].toFixed(4)}`);
       }
       mapRef.current.setView(center, 13);
+    } else {
+      console.log('No valid coordinates, using default center:', center);
+      mapRef.current.setView(center, 13);
     }
 
+    // Cleanup only when component unmounts
     return () => {
       if (mapRef.current) {
+        console.log('Cleaning up map');
         mapRef.current.remove();
         mapRef.current = null;
         markerRef.current = null;
@@ -368,62 +379,78 @@ export default function ListPropertyPage() {
   const defaultCenter = [5.6037, -0.1870];
 
   // Determine current coordinates
-  const currentLat = useAutoLocation ? parseFloat(autoLocation.latitude || '') : parseFloat(latitude || '');
-  const currentLon = useAutoLocation ? parseFloat(autoLocation.longitude || '') : parseFloat(longitude || '');
+  const currentLat = useAutoLocation && autoLocation.latitude && !isNaN(parseFloat(autoLocation.latitude)) ? parseFloat(autoLocation.latitude) : parseFloat(latitude || '');
+  const currentLon = useAutoLocation && autoLocation.longitude && !isNaN(parseFloat(autoLocation.longitude)) ? parseFloat(autoLocation.longitude) : parseFloat(longitude || '');
   const mapCenter = [
-    isNaN(currentLat) || !currentLat ? defaultCenter[0] : currentLat,
-    isNaN(currentLon) || !currentLon ? defaultCenter[1] : currentLon,
+    !isNaN(currentLat) && currentLat !== 0 ? currentLat : defaultCenter[0],
+    !isNaN(currentLon) && currentLon !== 0 ? currentLon : defaultCenter[1],
   ];
-  const hasValidCoords = !isNaN(currentLat) && !isNaN(currentLon) && currentLat && currentLon;
+  const hasValidCoords = !isNaN(currentLat) && !isNaN(currentLon) && currentLat !== 0 && currentLon !== 0;
 
   // Enhanced geolocation effect with better options and loading state
   useEffect(() => {
-    if (useAutoLocation && navigator.geolocation) {
-      setIsLoadingLocation(true);
-      
-      const options = {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 300000
-      };
+    let watchId;
+    if (useAutoLocation) {
+      if (!navigator.geolocation) {
+        console.error('Geolocation is not supported by this browser.');
+        toast.error('Geolocation not supported by this browser. Please enter coordinates manually.');
+        setUseAutoLocation(false);
+        return;
+      }
 
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setAutoLocation({ latitude, longitude });
-          setValue('latitude', latitude.toString());
-          setValue('longitude', longitude.toString());
-          setIsLoadingLocation(false);
-          toast.info('Location fetched successfully');
-        },
-        (error) => {
-          setIsLoadingLocation(false);
-          console.error('Geolocation error:', error);
-          
-          let errorMessage = 'Failed to fetch location. ';
-          switch (error.code) {
-            case error.PERMISSION_DENIED:
-              errorMessage += 'Location access denied. Please enable location services.';
-              break;
-            case error.POSITION_UNAVAILABLE:
-              errorMessage += 'Location information unavailable.';
-              break;
-            case error.TIMEOUT:
-              errorMessage += 'Location request timed out.';
-              break;
-            default:
-              errorMessage += 'Unknown error occurred.';
-          }
-          
-          toast.error(errorMessage + ' Please enter coordinates manually.');
+      navigator.permissions.query({ name: 'geolocation' }).then((permissionStatus) => {
+        console.log('Geolocation permission status:', permissionStatus.state);
+        if (permissionStatus.state === 'denied') {
+          toast.error('Location access denied. Please enable location services in your browser settings.');
           setUseAutoLocation(false);
-        },
-        options
-      );
-    } else if (useAutoLocation && !navigator.geolocation) {
-      toast.error('Geolocation is not supported by this browser. Please enter coordinates manually.');
-      setUseAutoLocation(false);
+          return;
+        }
+
+        setIsLoadingLocation(true);
+        const options = {
+          enableHighAccuracy: true,
+          timeout: 30000,
+          maximumAge: 0,
+        };
+        watchId = navigator.geolocation.watchPosition(
+          (position) => {
+            const { latitude, longitude, accuracy } = position.coords;
+            console.log('Geolocation success:', { latitude, longitude, accuracy });
+            // Temporarily bypass accuracy check for testing
+            console.log('Using coordinates despite low accuracy:', { latitude, longitude });
+            setAutoLocation({ latitude, longitude });
+            setValue('latitude', latitude.toString());
+            setValue('longitude', longitude.toString());
+            setIsLoadingLocation(false);
+            toast.info(`Location fetched: Lat ${latitude.toFixed(4)}, Lon ${longitude.toFixed(4)} (Accuracy: ${(accuracy / 1000).toFixed(1)} km)`);
+          },
+          (error) => {
+            console.error('Geolocation error:', error.message, error.code);
+            setIsLoadingLocation(false);
+            let errorMessage = 'Failed to fetch location. ';
+            switch (error.code) {
+              case error.PERMISSION_DENIED:
+                errorMessage += 'Location access denied. Please enable location services.';
+                break;
+              case error.POSITION_UNAVAILABLE:
+                errorMessage += 'Location information unavailable.';
+                break;
+              case error.TIMEOUT:
+                errorMessage += 'Location request timed out.';
+                break;
+              default:
+                errorMessage += 'Unknown error occurred.';
+            }
+            toast.error(errorMessage + ' Please enter coordinates manually.');
+            setUseAutoLocation(false);
+          },
+          options
+        );
+      });
     }
+    return () => {
+      if (watchId) navigator.geolocation.clearWatch(watchId);
+    };
   }, [useAutoLocation, setValue]);
 
   // Image handling functions
@@ -534,14 +561,10 @@ export default function ListPropertyPage() {
 
   const toggleLocationMode = () => {
     if (isLoadingLocation) return;
-    
     setUseAutoLocation((prev) => !prev);
-    if (!useAutoLocation) {
-      setValue('latitude', '');
-      setValue('longitude', '');
-    } else {
-      setAutoLocation({ latitude: '', longitude: '' });
-    }
+    setAutoLocation({ latitude: '', longitude: '' });
+    setValue('latitude', '');
+    setValue('longitude', '');
   };
 
   const onSubmit = async (data) => {

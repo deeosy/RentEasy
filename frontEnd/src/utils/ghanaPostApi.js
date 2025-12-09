@@ -36,3 +36,25 @@ export async function fetchLocationFromAddress(address) {
     
   }
 } 
+
+// fetch address from coordinates
+export async function fetchAddressFromCoordinates(latitude, longitude) {
+  try {
+      const response = await axios.post(`${API_BASE_URL}/get-address`, new URLSearchParams({ lat: latitude, long: longitude }), 
+        {
+          headers: { "Content-Type": "application/x-www-form-urlencoded" }
+        }
+      )
+
+      const data = response.data;
+      if (data.found && data.data?.Table?.[0]) {
+        const location = data.data.Table[0];
+        return location.GPSName || 'Unknown address'; // Fallback to 'Unknown address' if GPSName is missing
+      } else {
+        throw new Error('No address found for these coordinates');
+      }
+  } catch (error) {
+    console.error('Reverse geocoding error:', error);
+    throw new Error('Failed to fetch address. Coordinates will be used instead.');
+  }
+}

@@ -11,6 +11,7 @@ export default function LocationInput({
   autoLocation,
   isFetchingFromAddress,
   locationSource,
+  selectedAddress,
 }) {
   const handleGeoLocationChange = () => {
     if (isLoadingLocation) return;
@@ -19,12 +20,11 @@ export default function LocationInput({
 
   const renderLocationStatus = () => {
     // Map click location
-    if (locationSource === 'map' && autoLocation.latitude && autoLocation.longitude) {
+    if (locationSource === 'map' && selectedAddress) {
       return (
         <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
           <MapPin size={10} />
-          Location selected: Lat {parseFloat(autoLocation.latitude).toFixed(4)}, 
-          Lon {parseFloat(autoLocation.longitude).toFixed(4)}
+          Location selected: {selectedAddress}
         </p>
       );
     }
@@ -39,12 +39,11 @@ export default function LocationInput({
           </div>
         );
       }
-      if(autoLocation.latitude && autoLocation.longitude) {
+      if(selectedAddress) {
         return (
           <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
             <MapPin size={10} />
-            Location detected: Lat {parseFloat(autoLocation.latitude).toFixed(4)}, 
-            Lon {parseFloat(autoLocation.longitude).toFixed(4)}
+            Location detected: {selectedAddress}
           </p>
         )
       }
@@ -54,6 +53,15 @@ export default function LocationInput({
           ⚠ Location not yet available
         </p>
       );
+    }
+    // address fetch (show input address)
+    if (locationSource === 'address' && selectedAddress) {
+      return (
+        <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
+          <MapPin size={10} />
+          Location detected: {selectedAddress}
+        </p>
+      )
     }
     return null
   };

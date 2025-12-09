@@ -69,8 +69,10 @@ export default function Header() {
                                 <span className='text-xl font-normal'>rent</span>EASY
                             </h3>
                         </NavLink>
-                        <nav className='hidden md:ml-8 md:flex md:space-x-8'>
-                            <NavLink to="/search" className="text-gray-900 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">Search</NavLink>
+                        <nav className='hidden md:ml-8 md:flex md:space-x-4 '>
+                            <NavLink to="/properties" className="text-gray-900 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">
+                                Available Properties
+                            </NavLink>
                             {isAuth && (
                                 <NavLink to="/list-property" className="text-gray-900 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">
                                     List Property
@@ -167,11 +169,11 @@ export default function Header() {
                 <div className="md:hidden bg-white border-t border-gray-200">
                     <nav className="flex flex-col p-4 space-y-2">
                         <NavLink
-                            to="/search"
+                            to="/properties"
                             className="text-gray-900 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium"
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
-                            Search
+                            Available Properties
                         </NavLink>
                         {isAuth && (
                             <>

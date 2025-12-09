@@ -6,7 +6,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import debounce from 'lodash/debounce';
 import usePropertyStore from '../store/usePropertyStore';
-import { fetchLocationFromAddress } from '../utils/ghanaPostApi'
+import { fetchLocationFromAddress, fetchAddressFromCoordinates } from '../utils/ghanaPostApi'
 import MapComponent from '../component/MapComponent';
 import AddImages from '../component/AddImages';
 import FormField from '../component/FormField';
@@ -38,11 +38,13 @@ export default function ListPropertyPage() {
   const [images, setImages] = useState([]);
   const [useGeoLocation, setUseGeoLocation] = useState(false);
   const [autoLocation, setAutoLocation] = useState({ latitude: '', longitude: '' });
+  const [selectedAddress, setSelectedAddress] = useState('');
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [isFetchingFromAddress, setIsFetchingFromAddress] = useState(false); 
   const [locationSource, setLocationSource] = useState('')  // state to track source of coordinate either (map, auto location, address)
+
   const navigate = useNavigate();
-  const { addProperty } = usePropertyStore();
+  const { addProperty, isAuth } = usePropertyStore();
 
   // Default map center (Accra, Ghana)
   const defaultCenter = [5.6037, -0.1870];
@@ -62,15 +64,23 @@ export default function ListPropertyPage() {
           setUseGeoLocation(false);
           setIsLoadingLocation(false);
           setLocationSource('');
+          setSelectedAddress('');
           return;
         }
         watchId = navigator.geolocation.watchPosition(
-          (position) => {
+          async (position) => {
             const { latitude, longitude } = position.coords;
             setAutoLocation({ latitude, longitude });
             setLocationSource('geolocation');
             setIsLoadingLocation(false);
-            toast.info(`Location fetched: Lat ${latitude.toFixed(4)}, Lon ${longitude.toFixed(4)}`);
+            try {
+              const address = await fetchAddressFromCoordinates(latitude, longitude);
+              setSelectedAddress(address);
+              toast.info(`Location fetched: ${address}`);
+            } catch (error) {
+              setSelectedAddress(`Lat ${latitude.toFixed(4)}, Lon ${longitude.toFixed(4)}`)
+              toast.warn(error.message);
+            }
           },
           (error) => {
             setIsLoadingLocation(false);
@@ -90,6 +100,8 @@ export default function ListPropertyPage() {
             }
             toast.error(errorMessage);
             setUseGeoLocation(false);
+            setLocationSource('');
+            setSelectedAddress('');
           },
           { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
         );
@@ -107,15 +119,18 @@ export default function ListPropertyPage() {
       try {
         const { latitude, longitude } = await fetchLocationFromAddress(address);
         setAutoLocation({ latitude, longitude });
-        toast.info(`Coordinates fetched for ${address}: Lat ${latitude}, Lon ${longitude}`);        
+        setLocationSource('address');
+        setSelectedAddress(address)
+        toast.info(`Coordinates fetched for ${address}`);        
       } catch (error) {
         toast.error(error.message);
         setAutoLocation({ latitude: '', longitude: '' }) // clear invalid location
         setLocationSource('');
+        setSelectedAddress('')
       } finally {
         setIsFetchingFromAddress(false);
       }
-    }, 1000), // debounce delay of 1 min
+    }, 1000), // debounce delay of 1 sec
     []
   ) 
 
@@ -136,21 +151,53 @@ export default function ListPropertyPage() {
       //clear location if invalid format
       setAutoLocation( { latitude: '', longitude: '' })
       setLocationSource('');
+      setSelectedAddress('');
     }
   }, [ghanaPostAddress, useGeoLocation, debouncFetchLocation, locationSource])
 
   // handler for map click
-  const handleMapClick = (latlng) => {
+  const handleMapClick = async (latlng) => {
     const { lat, lng } = latlng;
     setAutoLocation({ latitude:lat, longitude:lng });
     setLocationSource('map')
-    toast.info(`location selected from map: Lat ${lat.toFixed(4)}, Lon ${lng.toFixed(4)}`)
+    try {
+      const address = await fetchAddressFromCoordinates(lat, lng);
+      setSelectedAddress(address)
+      toast.info(`Location selected: ${address}}`)
+    } catch (error) {
+      setSelectedAddress(`Lat ${lat.toFixed(4)}, Lon ${lng.toFixed(4)}`)
+      toast.warn(error.message)
+    }
     if(useGeoLocation){ // uncheck geoloaction if active
       setUseGeoLocation(false);
     }
   };
 
+  // Utility to log FormData contents
+  const logFormData = (formData) => {
+    if (!(formData instanceof FormData)) {
+      console.error('logFormData: Invalid FormData object', formData);
+      return;
+    }
+    const entries = {};
+    try {
+      for (let [key, value] of formData.entries()) {
+        entries[key] = value instanceof File ? value.name : value;
+      }
+      console.log('FormData contents:', entries);
+    } catch (error) {
+      console.error('Error logging FormData:', error);
+    }
+  };
+
   const onSubmit = async (data) => {
+    // check authentication
+    if(!isAuth) {
+      toast.error('You must be logged in to post a property.');
+      navigate('/signin')
+      return;
+    }
+
     if (!data.ghanaPostAddress && (!autoLocation.latitude || !autoLocation.longitude)) {
       toast.error('Either Ghana Post Address or GPS coordinates are required.');
       return;
@@ -165,22 +212,27 @@ export default function ListPropertyPage() {
     formDataToSend.append('description', data.description);
     formDataToSend.append('price', data.price);
     formDataToSend.append('type', data.type);
-    formDataToSend.append('beds', data.baths);
-    formDataToSend.append('baths', data.baths);
-    formDataToSend.append('location[ghanaPostAddress]', data.ghanaPostAddress);
-    formDataToSend.append('location[gps][latitude]', useGeoLocation ? autoLocation.latitude : '');
-    formDataToSend.append('location[gps][longitude]', useGeoLocation ? autoLocation.longitude : '');
+    formDataToSend.append('beds', data.beds || 0);
+    formDataToSend.append('baths', data.baths || 0);
+    formDataToSend.append('location[ghanaPostAddress]', data.ghanaPostAddress || '');
+    formDataToSend.append('location[gps][latitude]', autoLocation.latitude || '');
+    formDataToSend.append('location[gps][longitude]',autoLocation.longitude || '');
     images.forEach((image) => formDataToSend.append('images', image));
+
+    //log formData for debugging
+    logFormData(formDataToSend)
 
     try {
       const response = await addProperty(formDataToSend);
       if (response.paymentUrl) {
+        console.log('Redirecting to payment URL: ', response.paymentUrl);        
         window.location.href = response.paymentUrl;
       } else {
         toast.success('Property posted successfully!');
         navigate('/properties');
       }
     } catch (error) {
+      console.error('Submission error: ', error);      
       toast.error(error.message || 'Failed to post property');
     }
   };
@@ -232,6 +284,7 @@ export default function ListPropertyPage() {
             autoLocation={autoLocation}
             isFetchingFromAddress={isFetchingFromAddress} 
             locationSource={locationSource}
+            selectedAddress={selectedAddress}
           />
           <button
             type="submit"

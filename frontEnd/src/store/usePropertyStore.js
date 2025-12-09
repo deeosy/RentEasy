@@ -155,42 +155,23 @@ const usePropertyStore = create(
       // Update properties in state
       setProperties: (properties) => set({ properties }),
       // Add a new property
-      addProperty: async (propertyData, files) => {
+      addProperty: async (formData) => {
         try {
-          const formData = new FormData();
-          formData.append('title', propertyData.title);
-          formData.append('description', propertyData.description);
-          formData.append('price', propertyData.price);
-          formData.append('location[gps][latitude]', propertyData.location.gps.latitude || '');
-          formData.append('location[gps][longitude]', propertyData.location.gps.longitude || '');
-          formData.append('location[ghanaPostAddress]', propertyData.location.ghanaPostAddress || '');
-          formData.append('type', propertyData.type);
-          formData.append('beds', propertyData.beds || 0);
-          formData.append('baths', propertyData.baths || 0);
-          files.forEach((file) => formData.append('images', file));
-
-          // // Log FormData for debugging
-          // const formDataLog = {
-          //   title: propertyData.title,
-          //   description: propertyData.description,
-          //   price: propertyData.price,
-          //   'location[gps][latitude]': propertyData.location.gps.latitude || '',
-          //   'location[gps][longitude]': propertyData.location.gps.longitude || '',
-          //   'location[ghanaPostAddress]': propertyData.location.ghanaPostAddress || '',
-          //   type: propertyData.type,
-          //   beds: propertyData.beds || 0,
-          //   baths: propertyData.baths || 0,
-          //   images: files.length,
-          // };
-          // console.log('FormData sent:', formDataLog);
-
           const response = await axios.post('https://renteasy-m3ux.onrender.com/api/properties', formData, {
+            headers: {'Content-Type': 'multipart/form-data'},
             withCredentials: true,
           });
+          console.log('Add property response:', response.data);
+          
           return response.data;
         } catch (err) {
-          console.error('Add property error:', err.response?.data || err.message);
-          return { success: false, message: err.response?.data?.message || 'Failed to create property' };
+          console.error('Add property error:', {
+            message:err.message,
+            response: err.response?.data,
+            status: err.response?.status,
+            headers: err.response?.headers,
+          });
+          throw new Error(err.response?.data?.message || 'Failed to create property')
         }
       },
     }),

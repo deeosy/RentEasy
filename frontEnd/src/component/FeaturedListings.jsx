@@ -2,11 +2,11 @@ import React from 'react'
 
 export default function FeaturedListings({ listings, handleViewDetails }) {
   return (
-    <section className='py-16 bg-gray-50' >
+    <section className='py-16' >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="mb-12">
                 <h2 className='text-3xl font-bold text-gray-900 mb-4' >Featured Listings</h2>
-                <p className='text-gray-600 max-w-3xl'>Discover our handpicked selection of properties
+                <p className='text-gray-600 w-full'>Discover our handpicked selection of properties
                     available for rent. Connect directly with landlords and property owners and find your perfect home.
                 </p>
             </div>

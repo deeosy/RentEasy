@@ -5,6 +5,7 @@ import FormField from './FormField';
 export default function PropertyDetails({ register, errors }) {
   const typeOptions = [
     { value: '', label: 'Select Type' },
+    { value: 'room', label: 'Room' },
     { value: 'apartment', label: 'Apartment' },
     { value: 'house', label: 'House' },
     { value: 'condo', label: 'Condo' },

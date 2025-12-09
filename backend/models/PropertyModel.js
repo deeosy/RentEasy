@@ -78,7 +78,7 @@ const propertySchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['room', 'building', 'apartment', 'townhouse'],
+    enum: ['room', 'apartment', 'house', 'condo', 'studio', 'townhouse',],
     required: true,
   },
   beds: {

@@ -58,32 +58,156 @@ import React, { useEffect, useState } from 'react';
 import usePropertyStore from '../store/usePropertyStore';
 import axios from 'axios';
 import MapComponent from '../component/MapComponent';
+import SkeletonPropertyCard from '../component/SkeletonPropertyCard';
 
 // Main page to display all properties in a grid and on a map
 export default function PropertiesPage() {
     const { properties, setProperties, isAuth } = usePropertyStore();
     const [loading, setLoading] = useState(true); // Track loading state
+    const [searchQuery, setSearchQuery] = useState('');
+    const [showFilters, setShowFilters] = useState(false);
+    const [searchInput, setSearchInput] = useState('')
+
+    const [typeFilter, setTypeFilter] = useState('');
+    const [minPrice, setMinPrice] = useState('');
+    const [maxPrice, setMaxPrice] = useState('');
+    const [bedFilter, setBedFilter] = useState('');
+
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    
 
     // Fetch properties from backend when component mounts
     useEffect(() => {
         const fetchProperties = async () => {
+            setLoading(true);
+
             try {
-                setLoading(true);
-                const response = await axios.get('https://renteasy-m3ux.onrender.com/api/properties');
-                setProperties(response.data.properties);
+                const response = await axios.get(
+                    `${import.meta.env.VITE_API_BASE_URL}/api/properties` ,
+                    {
+                        params: {
+                            search: searchQuery || undefined,
+                            type: typeFilter || undefined,
+                            minPrice: minPrice || undefined,
+                            maxPrice: maxPrice || undefined,
+                            beds: bedFilter || undefined,
+                            page,
+                            limit: 20,
+                        },
+                    }
+                );
+
+                const data = response?.data || {};
+
+                setProperties(data.properties || []);
+                setTotalPages(data.pagination?.pages || 1);
+
             } catch (err) {
                 console.error('Error fetching properties:', err);
-            } finally {
-                setLoading(false);
+
+                // Prevent crash by falling back to safe defaults
+                setProperties([]);
+                setTotalPages(1);
             }
+
+            setLoading(false);
         };
+
         fetchProperties();
-    }, [setProperties]);
+    }, [searchQuery, typeFilter, minPrice, maxPrice, bedFilter, page]);
+
+
+    // debounce to prevent overwelming API calls to the server
+    useEffect(() => {
+      const delay = setTimeout(() => {
+        setSearchQuery(searchInput);  // trigger API call only after delay
+      }, 600);
+
+      return () => clearTimeout(delay)
+    }, [searchInput])
+
+    useEffect(() => {
+      setPage(1)
+    }, [searchQuery, typeFilter, minPrice, maxPrice, bedFilter])
+
+    useEffect(() => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }, [page]);
+
+    const handleViewDetails = (property) => {
+      window.location.href = `/property/${property._id}`
+    };
 
     return (
         <>
-            <div className="py-16">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8  ">
+            {/* Search Bar + Filters */}
+            <div className="rounded-lg mb-4 flex flex-col lg:flex-row justify-between ">
+                {/* Search Bar */}
+                <div className="flex gap-3 justify-between lg:items-center ">
+                    <input 
+                        type="text"
+                        placeholder='Search for your next home ...'
+                        className='border p-2 rounded-md w-full lg:w-[400px] md:flex-1 focus:ring-2 focus:ring-indigo-500'
+                        value={searchInput}
+                        onChange={(e)=> setSearchInput(e.target.value)}                    
+                    />
+                    <button
+                        onClick={()=> setShowFilters(!showFilters)}
+                        className='lg:hidden bg-indigo-600 text-white px-4 py-2 rounded-md'
+                    >
+                        Filters
+                    </button>
+                </div>
+                {/* Filters (hidden for mobile view and visible on desktop) */}
+                <div className={`${showFilters ? 'block' : 'hidden'} lg:block mt-4 lg:mt-0`}>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {/* Property type */}
+                        <select value={typeFilter} onChange={(e)=>setTypeFilter(e.target.value)} 
+                            className='sm:w-[120px] border p-2 rounded-md'
+                        >
+                            <option value="">All Types</option>
+                            <option value="room">Room</option>
+                            <option value="apartment">Apartment</option>
+                            <option value="house">House</option>
+                            <option value="studio">Studio</option>
+                            <option value="townhouse">Town House</option>
+                            <option value="condo">Condo</option>
+                        </select>
+
+                        {/* Min Price */}
+                        <input 
+                            
+                            type="number"
+                            placeholder='Min Price'
+                            className='border p-2 rounded-md sm:w-[120px]'
+                            value={minPrice}
+                            onChange={(e)=> setMinPrice(e.target.value)}
+                        />
+
+                        {/* Max Price */}
+                        <input 
+                            type="number"
+                            placeholder='Max Price'
+                            className='border p-2 rounded-md sm:w-[120px]'
+                            value={maxPrice}
+                            onChange={(e)=> setMaxPrice(e.target.value)}
+                        />
+
+                        {/* Beds */}
+                        <select className='border p-2 rounded-md sm:w-[120px] ' value={bedFilter} onChange={(e)=> setBedFilter(e.target.value)}>
+                            <option value="">Beds</option>
+                            <option value="1">1+</option>
+                            <option value="2">2+</option>
+                            <option value="3">3+</option>
+                            <option value="4">4+</option>
+                        </select>
+
+                    </div>
+                </div>
+            </div>
+                <div className="">
                     <div className="mb-8">
                         <h4 className="text-xl mb-5">Available Properties</h4>
                     </div>
@@ -93,7 +217,10 @@ export default function PropertiesPage() {
                     {/* Grid of property cards */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {loading ? (
-                            <p>Loading properties...</p>
+                            // showing 8 skeleton cards on loading
+                            Array.from({ length: 8 }).map((_, index) => (
+                                <SkeletonPropertyCard key={index} />
+                            ))  
                         ) : properties.length === 0 ? (
                             <p>No properties available</p>
                         ) : (
@@ -137,6 +264,29 @@ export default function PropertiesPage() {
                             )
                         }
                     </div>
+                </div>
+                {/* Pagination */}
+                <div className="flex justify-center items-center mt-10 gap-4">
+                    <button
+                        onClick={()=> setPage((prev)=> Math.max(prev - 1, 1) )}
+                        disabled={page === 1}
+                        className={`px-4 py-2 rounded-md ${page === 1 ? 'bg-gray-300 cursor-not-allowed' : 'bg-indigo-600 text-white'}`}
+                    >
+                        Previous
+                    </button>
+
+                    <span className='text-gray-700'>
+                        Page {page} of {totalPages}
+                    </span>
+                    
+                    <button
+                        onClick={()=> setPage((prev)=> Math.min(prev + 1, totalPages) )}
+                        disabled={page === totalPages}
+                        className={`px-4 py-2 rounded-md ${page === totalPages ? 'bg-gray-300 cursor-not-allowed' : 'bg-indigo-600 text-white'}`}
+                    >
+                        Next
+                    </button>
+
                 </div>
             
             </div>

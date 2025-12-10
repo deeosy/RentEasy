@@ -299,13 +299,67 @@ exports.confirmPayment = async (req, res) => {
   }
 };
 
-// Get all properties
+//get all properties with filtering, sorting and pagination features
 exports.getProperties = async (req, res) => {
   try {
-    const properties = await Property.find();
-    res.status(200).json({ properties });
+    const {
+      page=1,
+      limit =20,
+      minPrice,
+      maxPrice,
+      type,
+      beds,
+      baths,
+      search,
+    } = req.query;
+
+    const filters = {};
+    
+    // Price filter
+    if (minPrice || maxPrice) {
+      filters.price = {};
+      if (minPrice) filters.price.$gte = Number(minPrice);
+      if (maxPrice) filters.price.$lte = Number(maxPrice);
+    }
+
+    //Type filter
+    if (type) filters.type = type;
+
+    //Beds filter
+    if (beds) filters.beds = {$gte: Number(beds)}
+
+    //Baths filter
+    if (baths) filters.baths = {$gte: Number(baths)}
+
+    //Search by title or description
+    if(search) {
+      filters.$or = [
+        {title: {$regex: search, $options: 'i' } },
+        {description: {$regex: search, $options: 'i' } }
+      ];
+    }
+
+    const skip = (page -1) * limit;
+
+    const total = await Property.countDocuments(filters);
+
+    const properties = await Property.find(filters)
+      .sort({createdAt: -1}) // newest 1st
+      .skip(skip)
+      .limit(Number(limit))
+      
+    res.status(200).json({ 
+      properties,
+      pagination: {
+        total,
+        page: Number(page),
+        pages: Math.ceil(total / limit),
+        limit:Number(limit),
+      },
+    });
   } catch (err) {
     console.error('Get properties error:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+

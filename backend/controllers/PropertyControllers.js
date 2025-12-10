@@ -192,7 +192,7 @@ exports.createProperty = async (req, res) => {
     console.log('Received req.body:', req.body);
     console.log('Received files:', req.files);
 
-    const { title, description, price, type, beds, baths } = req.body;
+    const { title, description, price, propertyType, beds, baths } = req.body;
     const location = {
       gps: {
         latitude: req.body['location[gps][latitude]'] ? parseFloat(req.body['location[gps][latitude]']) : undefined,
@@ -201,7 +201,7 @@ exports.createProperty = async (req, res) => {
       ghanaPostAddress: req.body['location[ghanaPostAddress]'] || undefined,
     };
 
-    if (!title || !description || !price || !type || !beds || !baths) {
+    if (!title || !description || !price || !propertyType || !beds || !baths) {
       return res.status(400).json({ message: 'All required fields must be provided' });
     }
 
@@ -215,7 +215,7 @@ exports.createProperty = async (req, res) => {
       description,
       price: parseFloat(price),
       location,
-      type,
+      propertyType,
       beds: parseInt(beds) || 0,
       baths: parseInt(baths) || 0,
     };
@@ -227,8 +227,8 @@ exports.createProperty = async (req, res) => {
       propertyData.images = imageUrls;
     }
 
-    // Check if payment is required (3rd or subsequent listing)
-    if (userPropertyCount >= 2) {
+    // Check if payment is required (4th or subsequent listing)
+    if (userPropertyCount >= 3) {
       const paymentResponse = await axios.post(
         'https://api.paystack.co/transaction/initialize',
         {
@@ -323,7 +323,7 @@ exports.getProperties = async (req, res) => {
     }
 
     //Type filter
-    if (type) filters.type = type;
+    if (type) filters.propertyType = type;
 
     //Beds filter
     if (beds) filters.beds = {$gte: Number(beds)}
